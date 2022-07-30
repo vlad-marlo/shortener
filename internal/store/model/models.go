@@ -1,19 +1,17 @@
 package model
 
-var id int = 1
+import "github.com/google/uuid"
 
 type URL struct {
-	ID       int
+	ID       uuid.UUID
 	BaseURL  string
 	ShortUrl string
 }
 
 func NewUrl(url string) *URL {
 	u := &URL{
-		ID:      id,
+		ID:      uuid.New(),
 		BaseURL: url,
 	}
-	id += 1
-	u.shortUrl()
 	return u
 }
