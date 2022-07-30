@@ -17,6 +17,7 @@ func New(addr string) *Server {
 		Store: inmemory.New(),
 	}
 	s.Addr = addr
+	s.routes()
 	return s
 }
 
