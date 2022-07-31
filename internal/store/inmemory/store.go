@@ -7,7 +7,7 @@ import (
 )
 
 type Store struct {
-	Urls []model.URL
+	urls []model.URL
 }
 
 func New() *Store {
@@ -16,7 +16,7 @@ func New() *Store {
 
 // Returns BaseURL or URL object by ID
 func (s *Store) GetById(id string) (string, bool) {
-	for _, u := range s.Urls {
+	for _, u := range s.urls {
 		if u.ID.String() == id {
 			return u.BaseURL, true
 		}
@@ -29,6 +29,6 @@ func (s *Store) Create(u model.URL) error {
 	if _, ok := s.GetById(u.ID.String()); ok {
 		return fmt.Errorf("URL with id %s already exists", u.ID)
 	}
-	s.Urls = append(s.Urls, u)
+	s.urls = append(s.urls, u)
 	return nil
 }

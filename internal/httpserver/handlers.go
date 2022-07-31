@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -12,7 +13,10 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
+		// settin up response meta info
 		w.WriteHeader(http.StatusTemporaryRedirect)
+		w.Header().Set("Content-Type", "text/plain")
+
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
 			http.Error(w, "The path argument is missing", http.StatusBadRequest)
@@ -29,8 +33,9 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case http.MethodPost:
-		d, err := io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusCreated)
+
+		d, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -43,7 +48,8 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Write([]byte(u.ID.String()))
+		// generate full url like <base service url>/<url identificator>
+		w.Write([]byte(fmt.Sprintf("%s/%s", s.Addr, u.ID.String())))
 		return
 
 	default:
