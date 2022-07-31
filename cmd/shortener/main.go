@@ -5,6 +5,7 @@ import (
 )
 
 func main() {
-	s := httpserver.New("localhost:8080")
+	addr := "http://localhost:8080"
+	s := httpserver.New(addr)
 	s.ListenAndServe()
 }
