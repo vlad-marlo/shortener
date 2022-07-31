@@ -12,6 +12,7 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
+		w.WriteHeader(http.StatusTemporaryRedirect)
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
 			http.Error(w, "The path argument is missing", http.StatusBadRequest)
@@ -25,11 +26,11 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Write([]byte(url))
-		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
 
 	case http.MethodPost:
 		d, err := io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusCreated)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -43,7 +44,6 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Write([]byte(u.ID.String()))
-		w.WriteHeader(http.StatusCreated)
 		return
 
 	default:
