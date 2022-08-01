@@ -1,8 +1,7 @@
 package inmemory
 
 import (
-	"fmt"
-
+	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
@@ -15,19 +14,28 @@ func New() *Store {
 }
 
 // Returns BaseURL or URL object by ID
-func (s *Store) GetById(id string) (string, bool) {
+func (s *Store) GetById(id string) (model.URL, error) {
 	for _, u := range s.urls {
 		if u.ID.String() == id {
-			return u.BaseURL, true
+			return u, nil
 		}
 	}
-	return "", false
+	return model.URL{}, store.ErrNotFound
+}
+
+func (s *Store) emailAlreadyExists(url model.URL) bool {
+	for _, u := range s.urls {
+		if u.ID.String() == url.ID.String() || u.BaseURL == url.BaseURL {
+			return true
+		}
+	}
+	return false
 }
 
 // Create Url model to storage
 func (s *Store) Create(u model.URL) error {
-	if _, ok := s.GetById(u.ID.String()); ok {
-		return fmt.Errorf("URL with id %s already exists", u.ID)
+	if s.emailAlreadyExists(u) {
+		return store.ErrAlreadyExists
 	}
 	s.urls = append(s.urls, u)
 	return nil

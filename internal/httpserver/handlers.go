@@ -14,8 +14,8 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodGet:
 		// settin up response meta info
+		w.Header().Set("Content-Type", "X-Content-Type-Options")
 		w.WriteHeader(http.StatusTemporaryRedirect)
-		w.Header().Set("Content-Type", "text/plain")
 
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
@@ -23,20 +23,19 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		url, ok := s.Store.GetById(id)
-		if !ok {
-			http.Error(w, "Where is no url with that id!", http.StatusNotFound)
+		url, err := s.Store.GetById(id)
+		if err != nil {
+			http.Error(w, "Where is no url with that id!", http.StatusBadRequest)
 			return
 		}
+		w.Header().Add("Location", url.BaseURL)
 
-		w.Header().Set("Location", url)
-		// w.Write([]byte(url))
 		return
 
 	case http.MethodPost:
 		// settin up response meta info
-		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
 
 		d, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -51,8 +50,8 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// generate full url like <base service url>/<url identificator>
-		w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Addr, u.ID.String())))
+		// generate full url alike <base service url>/<url identificator>
+		w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID.String())))
 		return
 
 	default:
