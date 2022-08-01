@@ -28,7 +28,7 @@ func New(config *config) *Server {
 }
 
 func (s *Server) routes() {
-	http.HandleFunc("/", s.handleUrlGetCreate)
+	http.HandleFunc("/", s.handleURLGetCreate)
 }
 
 func (s *Server) configureStore() error {
@@ -37,7 +37,7 @@ func (s *Server) configureStore() error {
 		s.Store = inmemory.New()
 
 	default:
-		return IncorrectStoreType
+		return ErrIncorrectStoreType
 	}
 
 	return nil

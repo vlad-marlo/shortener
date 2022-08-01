@@ -9,7 +9,7 @@ type URL struct {
 	BaseURL string
 }
 
-func NewUrl(url string) URL {
+func NewURL(url string) URL {
 	return URL{
 		ID:      uuid.New(),
 		BaseURL: url,

@@ -9,12 +9,12 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
-func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 
 	case http.MethodGet:
-		// settin up response meta info
+		// setting up response meta info
 
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
@@ -22,7 +22,7 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		url, err := s.Store.GetById(id)
+		url, err := s.Store.GetByID(id)
 		if err != nil {
 			http.Error(w, "Where is no url with that id!", http.StatusBadRequest)
 			return
@@ -34,7 +34,7 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case http.MethodPost:
-		// settin up response meta info
+		// setting up response meta info
 		w.WriteHeader(http.StatusCreated)
 
 		d, err := io.ReadAll(r.Body)
@@ -43,7 +43,7 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		u := model.NewUrl(string(d))
+		u := model.NewURL(string(d))
 
 		if err := s.Store.Create(u); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
