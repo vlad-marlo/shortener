@@ -23,7 +23,7 @@ func (s *Store) GetById(id string) (model.URL, error) {
 	return model.URL{}, store.ErrNotFound
 }
 
-func (s *Store) emailAlreadyExists(url model.URL) bool {
+func (s *Store) urlExists(url model.URL) bool {
 	for _, u := range s.urls {
 		if u.ID.String() == url.ID.String() || u.BaseURL == url.BaseURL {
 			return true
@@ -34,7 +34,7 @@ func (s *Store) emailAlreadyExists(url model.URL) bool {
 
 // Create Url model to storage
 func (s *Store) Create(u model.URL) error {
-	if s.emailAlreadyExists(u) {
+	if s.urlExists(u) {
 		return store.ErrAlreadyExists
 	}
 	s.urls = append(s.urls, u)

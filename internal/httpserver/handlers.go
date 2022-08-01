@@ -10,12 +10,11 @@ import (
 )
 
 func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 
 	case http.MethodGet:
 		// settin up response meta info
-		w.Header().Set("Content-Type", "X-Content-Type-Options")
-		w.WriteHeader(http.StatusTemporaryRedirect)
 
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
@@ -28,13 +27,14 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Where is no url with that id!", http.StatusBadRequest)
 			return
 		}
-		w.Header().Add("Location", url.BaseURL)
+
+		w.Header().Set("Location", url.BaseURL)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 
 		return
 
 	case http.MethodPost:
 		// settin up response meta info
-		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
 
 		d, err := io.ReadAll(r.Body)
