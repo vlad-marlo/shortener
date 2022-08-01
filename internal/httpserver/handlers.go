@@ -29,7 +29,8 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Write([]byte(url))
+		w.Header().Set("Location", url)
+		// w.Write([]byte(url))
 		return
 
 	case http.MethodPost:
