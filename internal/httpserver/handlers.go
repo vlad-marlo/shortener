@@ -50,7 +50,7 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// generate full url like <base service url>/<url identificator>
-		w.Write([]byte(fmt.Sprintf("%s/%s", s.Addr, u.ID.String())))
+		w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Addr, u.ID.String())))
 		return
 
 	default:
