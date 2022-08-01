@@ -34,7 +34,9 @@ func (s *Server) handleUrlGetCreate(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case http.MethodPost:
+		// settin up response meta info
 		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "text/plain")
 
 		d, err := io.ReadAll(r.Body)
 		if err != nil {
