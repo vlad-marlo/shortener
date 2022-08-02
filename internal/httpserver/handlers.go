@@ -14,8 +14,6 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		// setting up response meta info
-
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
 			http.Error(w, "The path argument is missing", http.StatusBadRequest)
@@ -45,13 +43,17 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 
 		u := model.NewURL(string(d))
 
-		if err := s.Store.Create(u); err != nil {
+		if err = s.Store.Create(u); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		// generate full url alike <base service url>/<url identificator>
-		w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID.String())))
+		_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID.String())))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		return
 
 	default:
