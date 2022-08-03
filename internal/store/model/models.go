@@ -5,13 +5,13 @@ import (
 )
 
 type URL struct {
-	ID      uuid.UUID
+	ID      string
 	BaseURL string
 }
 
 func NewURL(url string) URL {
 	return URL{
-		ID:      uuid.New(),
+		ID:      uuid.New().String(),
 		BaseURL: url,
 	}
 }

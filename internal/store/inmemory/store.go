@@ -16,16 +16,17 @@ func New() *Store {
 // GetByID Returns BaseURL or URL object by ID
 func (s *Store) GetByID(id string) (model.URL, error) {
 	for _, u := range s.urls {
-		if u.ID.String() == id {
+		if u.ID == id {
 			return u, nil
 		}
 	}
 	return model.URL{}, store.ErrNotFound
 }
 
+// Supporting func to check existing url in storage or not
 func (s *Store) urlExists(url model.URL) bool {
 	for _, u := range s.urls {
-		if u.ID.String() == url.ID.String() || u.BaseURL == url.BaseURL {
+		if u.ID == url.ID || u.BaseURL == url.BaseURL {
 			return true
 		}
 	}

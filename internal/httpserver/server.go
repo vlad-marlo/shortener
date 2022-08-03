@@ -9,36 +9,40 @@ import (
 )
 
 type Server struct {
-	http.Server
+	srv http.Server
 
 	Store  store.Store
-	Config *config
+	Config *Config
 }
 
-func New(config *config) *Server {
+func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
 	}
-	s.Addr = s.Config.BindAddr
-	s.routes()
+	s.srv.Addr = s.Config.BindAddr
+	s.configureRoutes()
 	if err := s.configureStore(); err != nil {
 		log.Fatal(err)
 	}
 	return s
 }
 
-func (s *Server) routes() {
+func (s *Server) configureRoutes() {
 	http.HandleFunc("/", s.handleURLGetCreate)
 }
 
 func (s *Server) configureStore() error {
 	switch s.Config.StorageType {
+
 	case "inmemory":
 		s.Store = inmemory.New()
 
 	default:
 		return ErrIncorrectStoreType
 	}
-
 	return nil
+}
+
+func (s *Server) ListenAndServe() error {
+	return s.srv.ListenAndServe()
 }

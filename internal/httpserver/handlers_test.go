@@ -11,7 +11,7 @@ func TestServer_handleURLGetCreate(t *testing.T) {
 	type fields struct {
 		Server http.Server
 		Store  store.Store
-		Config *config
+		Config *Config
 	}
 	type args struct {
 		w http.ResponseWriter
@@ -27,7 +27,7 @@ func TestServer_handleURLGetCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Server{
-				Server: tt.fields.Server,
+				srv:    tt.fields.Server,
 				Store:  tt.fields.Store,
 				Config: tt.fields.Config,
 			}

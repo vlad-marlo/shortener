@@ -49,7 +49,7 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// generate full url alike <base service url>/<url identificator>
-		_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID.String())))
+		_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

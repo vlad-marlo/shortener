@@ -11,23 +11,30 @@ func TestStore_Create(t *testing.T) {
 	type fields struct {
 		urls []model.URL
 	}
-	type args struct {
-		u model.URL
-	}
 	tests := []struct {
 		name    string
 		fields  fields
-		args    args
+		u       model.URL
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "with empty urls",
+			u: model.URL{
+				ID:      "some-text",
+				BaseURL: "https://google.com/",
+			},
+			fields: fields{
+				urls: []model.URL{},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{
 				urls: tt.fields.urls,
 			}
-			if err := s.Create(tt.args.u); (err != nil) != tt.wantErr {
+			if err := s.Create(tt.u); (err != nil) != tt.wantErr {
 				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
