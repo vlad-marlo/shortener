@@ -35,29 +35,29 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 		// setting up response meta info
 		w.WriteHeader(http.StatusCreated)
 
-		d, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		data, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		if s.HandleErrorOr500(w, err) {
 			return
 		}
 
-		u := model.NewURL(string(d))
+		u, err := model.NewURL(string(data))
+		if s.HandleErrorOr500(w, err) {
+			return
+		}
 
-		if err = s.Store.Create(u); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err = s.Store.Create(u); s.HandleErrorOr500(w, err) {
 			return
 		}
 
 		// generate full url alike <base service url>/<url identificator>
 		_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+		s.HandleErrorOr500(w, err)
 		return
 
 	default:
-		http.Error(w, "Only POST and GET are allowed!", http.StatusMethodNotAllowed)
+		http.Error(w, "Only POST and GET are allowed!", http.StatusBadRequest)
 		return
 	}
 }
