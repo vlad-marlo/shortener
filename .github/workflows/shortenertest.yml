@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - increment_1
+      - increment_2
 
 jobs:
 
