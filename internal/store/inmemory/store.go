@@ -13,7 +13,7 @@ func New() *Store {
 	return &Store{}
 }
 
-// Returns BaseURL or URL object by ID
+// GetByID Returns BaseURL or URL object by ID
 func (s *Store) GetByID(id string) (model.URL, error) {
 	for _, u := range s.urls {
 		if u.ID.String() == id {

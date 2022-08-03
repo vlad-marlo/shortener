@@ -3,6 +3,6 @@ package store
 import "errors"
 
 var (
-	ErrNotFound      error = errors.New("not found")
-	ErrAlreadyExists error = errors.New("already in storage")
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already in storage")
 )

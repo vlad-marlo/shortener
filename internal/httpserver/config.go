@@ -5,7 +5,7 @@ type config struct {
 	StorageType string
 }
 
-// return pointer to config with default params
+// NewConfig return pointer to config with default params
 func NewConfig() *config {
 	return &config{
 		BindAddr:    "localhost:8080",
