@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -57,7 +58,7 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 		return
 
 	default:
-		http.Error(w, "Only POST and GET are allowed!", http.StatusBadRequest)
+		s.HandleErrorOr500(w, errors.New("Only POST and GET are allowed!"))
 		return
 	}
 }

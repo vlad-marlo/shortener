@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,33 +20,53 @@ func TestServer_handleURLGetCreate(t *testing.T) {
 		headersResponse bool
 	}
 	type want struct {
-		statusCode int
-		headers    http.Header
-		body       string
+		statusCode              int
+		body                    string
+		wantInternalServerError bool
+		contentType             string
 	}
 	tests := []struct {
 		name string
 		args args
 		want want
 	}{
-		// TODO: add test cases.
+		{
+			name: "correct post request",
+			args: args{
+				method:          http.MethodPost,
+				url:             "/",
+				body:            strings.NewReader("howdy.ho"),
+				headersResponse: true,
+				bodyResponse:    false,
+			},
+			want: want{
+				statusCode:              http.StatusCreated,
+				body:                    "",
+				wantInternalServerError: false,
+				contentType:             "text/plain",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(tt.args.method, tt.args.url, tt.args.body)
+			if tt.args.url == "" && tt.args.method == http.MethodPost {
+				tt.args.url = "/"
+			}
+			req := httptest.NewRequest(tt.args.method, tt.args.url, tt.args.body)
 
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(s.handleURLGetCreate)
-			h.ServeHTTP(w, request)
+			h.ServeHTTP(w, req)
 
 			res := w.Result()
 
+			if tt.want.wantInternalServerError && tt.want.statusCode == 0 {
+				tt.want.statusCode = http.StatusInternalServerError
+			}
 			assert.Equal(t, res.StatusCode, tt.want.statusCode)
 
-			if tt.args.headersResponse {
-				for k, v := range tt.want.headers {
-					assert.Equal(t, res.Header.Get(k), v, "Header[%v] want %v got %v", k, v, res.Header.Get(k))
-				}
+			if tt.args.method == http.MethodPost && tt.args.headersResponse {
+				assert.NotNil(t, res.Header.Get("Locate"), "locate header must be not null")
 			}
 
 			if tt.args.bodyResponse {
@@ -56,6 +77,28 @@ func TestServer_handleURLGetCreate(t *testing.T) {
 				// checking response answer
 				assert.Equal(t, string(resBody), tt.want.body)
 			}
+		})
+	}
+
+	unsupportedMethods := []string{
+		http.MethodConnect,
+		http.MethodOptions,
+		http.MethodDelete,
+		http.MethodPatch,
+		http.MethodTrace,
+		http.MethodHead,
+		http.MethodPut,
+	}
+	for _, method := range unsupportedMethods {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/", nil)
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(s.handleURLGetCreate)
+			h.ServeHTTP(w, req)
+
+			res := w.Result()
+			assert.Equal(t, res.StatusCode, http.StatusInternalServerError)
 		})
 	}
 }
