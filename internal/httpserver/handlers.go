@@ -10,55 +10,68 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
-func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/")
+	if id == "" {
+		http.Error(w, "The path argument is missing", http.StatusBadRequest)
+		return
+	}
+
+	url, err := s.Store.GetByID(id)
+	if err != nil {
+		http.Error(w, "Where is no url with that id!", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Location", url.BaseURL)
+	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
+	// setting up response meta info
 	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusCreated)
+
+	if r.URL.Path != "/" {
+		s.HandleErrorOr500(w, ErrIncorrectUrlPath)
+		return
+	}
+
+	data, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if s.HandleErrorOr500(w, err) {
+		return
+	}
+	if len(data) == 0 {
+		s.HandleErrorOr500(w, ErrIncorrectRequestBody)
+		return
+	}
+
+	u, err := model.NewURL(string(data))
+	if s.HandleErrorOr500(w, err) {
+		return
+	}
+
+	if err = s.Store.Create(u); s.HandleErrorOr500(w, err) {
+		return
+	}
+
+	// generate full url alike <base service url>/<url identificator>
+	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
+	s.HandleErrorOr500(w, err)
+}
+
+func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		id := strings.TrimPrefix(r.URL.Path, "/")
-		if id == "" {
-			http.Error(w, "The path argument is missing", http.StatusBadRequest)
-			return
-		}
-
-		url, err := s.Store.GetByID(id)
-		if err != nil {
-			http.Error(w, "Where is no url with that id!", http.StatusBadRequest)
-			return
-		}
-
-		w.Header().Set("Location", url.BaseURL)
-		w.WriteHeader(http.StatusTemporaryRedirect)
-
-		return
+		s.handleURLGet(w, r)
 
 	case http.MethodPost:
-		// setting up response meta info
-		w.WriteHeader(http.StatusCreated)
-
-		data, err := io.ReadAll(r.Body)
-		defer r.Body.Close()
-
-		if s.HandleErrorOr500(w, err) {
-			return
-		}
-
-		u, err := model.NewURL(string(data))
-		if s.HandleErrorOr500(w, err) {
-			return
-		}
-
-		if err = s.Store.Create(u); s.HandleErrorOr500(w, err) {
-			return
-		}
-
-		// generate full url alike <base service url>/<url identificator>
-		_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
-		s.HandleErrorOr500(w, err)
-		return
+		s.handleURLCreate(w, r)
 
 	default:
 		s.HandleErrorOr500(w, errors.New("Only POST and GET are allowed!"))
-		return
 	}
 }

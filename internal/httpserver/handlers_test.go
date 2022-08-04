@@ -10,20 +10,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestServer_handleURLGetCreate(t *testing.T) {
-	s := New(NewConfig())
+var (
+	s = New(NewConfig())
+)
+
+func TestServer_handleURLCreate(t *testing.T) {
 	type args struct {
-		method          string
-		url             string
-		body            io.Reader
-		bodyResponse    bool
-		headersResponse bool
+		url  string
+		body io.Reader
 	}
 	type want struct {
 		statusCode              int
-		body                    string
 		wantInternalServerError bool
-		contentType             string
 	}
 	tests := []struct {
 		name string
@@ -33,53 +31,62 @@ func TestServer_handleURLGetCreate(t *testing.T) {
 		{
 			name: "correct post request",
 			args: args{
-				method:          http.MethodPost,
-				url:             "/",
-				body:            strings.NewReader("howdy.ho"),
-				headersResponse: true,
-				bodyResponse:    false,
+				url:  "/",
+				body: strings.NewReader("howdy.ho"),
 			},
 			want: want{
 				statusCode:              http.StatusCreated,
-				body:                    "",
 				wantInternalServerError: false,
-				contentType:             "text/plain",
 			},
 		},
+		{
+			name: "uncorrect url",
+			args: args{
+				url:  "/sdf",
+				body: strings.NewReader("howdy.ho"),
+			},
+			want: want{
+				statusCode:              http.StatusInternalServerError,
+				wantInternalServerError: true,
+			},
+		},
+		{},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.args.url == "" && tt.args.method == http.MethodPost {
+			if tt.args.url == "" {
 				tt.args.url = "/"
 			}
-			req := httptest.NewRequest(tt.args.method, tt.args.url, tt.args.body)
+			req := httptest.NewRequest(http.MethodPost, tt.args.url, tt.args.body)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(s.handleURLGetCreate)
+			h := http.HandlerFunc(s.handleURLCreate)
 			h.ServeHTTP(w, req)
 
 			res := w.Result()
 
-			if tt.want.wantInternalServerError && tt.want.statusCode == 0 {
-				tt.want.statusCode = http.StatusInternalServerError
-			}
-			assert.Equal(t, res.StatusCode, tt.want.statusCode)
-
-			if tt.args.method == http.MethodPost && tt.args.headersResponse {
+			if tt.want.wantInternalServerError {
+				assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+			} else {
+				assert.Equal(t, tt.want.statusCode, res.StatusCode)
 				assert.NotNil(t, res.Header.Get("Locate"), "locate header must be not null")
 			}
 
-			if tt.args.bodyResponse {
-				defer res.Body.Close()
-				resBody, err := io.ReadAll(res.Body)
-				assert.NoError(t, err)
-
-				// checking response answer
-				assert.Equal(t, string(resBody), tt.want.body)
-			}
+			// if tt.args.bodyResponse {
+			// 	resBody, err := io.ReadAll(res.Body)
+			// 	defer res.Body.Close()
+			//
+			// 	assert.NoError(t, err)
+			//
+			// 	// checking response answer
+			// 	assert.Equal(t, string(resBody), tt.want.body)
+			// }
 		})
 	}
+}
 
+func TestServer_handlerURLGetCreate_UnsupportedMethods(t *testing.T) {
 	unsupportedMethods := []string{
 		http.MethodConnect,
 		http.MethodOptions,
