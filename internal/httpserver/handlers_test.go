@@ -43,7 +43,7 @@ func TestServer_handleURLCreate(t *testing.T) {
 			name: "uncorrect url",
 			args: args{
 				url:  "/sdf",
-				body: strings.NewReader("google .com"),
+				body: strings.NewReader("google.com"),
 			},
 			want: want{
 				statusCode:              http.StatusInternalServerError,
