@@ -17,11 +17,14 @@ type URL struct {
 }
 
 func NewURL(url string) (URL, error) {
-	if strings.Contains(url, string(" ")) {
-		return URL{}, ErrURLContainSpace
-	}
-	return URL{
+	u := URL{
 		ID:      uuid.New().String(),
 		BaseURL: url,
-	}, nil
+	}
+
+	if strings.Contains(u.BaseURL, " ") {
+		return URL{}, ErrURLContainSpace
+	}
+
+	return u, nil
 }

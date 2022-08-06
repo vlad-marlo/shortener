@@ -32,7 +32,7 @@ func TestServer_handleURLCreate(t *testing.T) {
 			name: "correct post request",
 			args: args{
 				url:  "/",
-				body: strings.NewReader("howdy.ho"),
+				body: strings.NewReader("google.com"),
 			},
 			want: want{
 				statusCode:              http.StatusCreated,
@@ -43,14 +43,23 @@ func TestServer_handleURLCreate(t *testing.T) {
 			name: "uncorrect url",
 			args: args{
 				url:  "/sdf",
-				body: strings.NewReader("howdy.ho"),
+				body: strings.NewReader("google .com"),
 			},
 			want: want{
 				statusCode:              http.StatusInternalServerError,
 				wantInternalServerError: true,
 			},
 		},
-		{},
+		{
+			name: "uncorrect body data(with space in url)",
+			args: args{
+				url:  "/",
+				body: strings.NewReader("google. com"),
+			},
+			want: want{
+				wantInternalServerError: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -70,7 +79,9 @@ func TestServer_handleURLCreate(t *testing.T) {
 				assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 			} else {
 				assert.Equal(t, tt.want.statusCode, res.StatusCode)
-				assert.NotNil(t, res.Header.Get("Locate"), "locate header must be not null")
+				resBody, err := io.ReadAll(res.Body)
+				assert.NoError(t, err, "error in res body")
+				assert.NotEmpty(t, resBody, "body must be not null")
 			}
 
 			// if tt.args.bodyResponse {
@@ -109,3 +120,84 @@ func TestServer_handlerURLGetCreate_UnsupportedMethods(t *testing.T) {
 		})
 	}
 }
+
+// func TestServer_handleURLCreate_dd(t *testing.T) {
+// 	type args struct {
+// 		url  string
+// 		body io.Reader
+// 	}
+// 	type want struct {
+// 		statusCode              int
+// 		wantInternalServerError bool
+// 	}
+// 	tests := []struct {
+// 		name string
+// 		args args
+// 		want want
+// 	}{
+// 		{
+// 			name: "correct post request",
+// 			args: args{
+// 				url:  "/",
+// 				body: strings.NewReader("google.com"),
+// 			},
+// 			want: want{
+// 				statusCode:              http.StatusCreated,
+// 				wantInternalServerError: false,
+// 			},
+// 		},
+// 		{
+// 			name: "uncorrect url",
+// 			args: args{
+// 				url:  "/sdf",
+// 				body: strings.NewReader("google.com"),
+// 			},
+// 			want: want{
+// 				statusCode:              http.StatusInternalServerError,
+// 				wantInternalServerError: true,
+// 			},
+// 		},
+// 		{
+// 			name: "uncorrect body data(with space in url)",
+// 			args: args{
+// 				url:  "/",
+// 				body: strings.NewReader("google. com"),
+// 			},
+// 			want: want{
+// 				wantInternalServerError: true,
+// 			},
+// 		},
+// 	}
+//
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			if tt.args.url == "" {
+// 				tt.args.url = "/"
+// 			}
+// 			req := httptest.NewRequest(http.MethodPost, tt.args.url, tt.args.body)
+//
+// 			w := httptest.NewRecorder()
+// 			h := http.HandlerFunc(s.handleURLCreate)
+// 			h.ServeHTTP(w, req)
+//
+// 			res := w.Result()
+//
+// 			if tt.want.wantInternalServerError {
+// 				assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+// 			} else {
+// 				assert.Equal(t, tt.want.statusCode, res.StatusCode)
+// 				assert.NotEmpty(t, res.Header.Get("Locate"), "locate header must be not null")
+// 			}
+//
+// 			// if tt.args.bodyResponse {
+// 			// 	resBody, err := io.ReadAll(res.Body)
+// 			// 	defer res.Body.Close()
+// 			//
+// 			// 	assert.NoError(t, err)
+// 			//
+// 			// 	// checking response answer
+// 			// 	assert.Equal(t, string(resBody), tt.want.body)
+// 			// }
+// 		})
+// 	}
+// }

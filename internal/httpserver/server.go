@@ -18,12 +18,18 @@ type Server struct {
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
+		srv:    http.Server{Addr: config.BindAddr},
 	}
-	s.srv.Addr = s.Config.BindAddr
+
 	s.configureRoutes()
+	log.Print("routes configured succesfully")
+
 	if err := s.configureStore(); err != nil {
 		log.Fatal(err)
+	} else {
+		log.Print("store configured succesfully")
 	}
+
 	return s
 }
 
@@ -33,7 +39,6 @@ func (s *Server) configureRoutes() {
 
 func (s *Server) configureStore() error {
 	switch s.Config.StorageType {
-
 	case "inmemory":
 		s.Store = inmemory.New()
 
@@ -51,7 +56,6 @@ func (s *Server) ListenAndServe() error {
 func (s *Server) HandleErrorOr500(w http.ResponseWriter, err error) bool {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return true
 	}
-	return false
+	return err != nil
 }
