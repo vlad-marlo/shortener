@@ -16,15 +16,22 @@ type URL struct {
 	BaseURL string
 }
 
+// NewURL ...
 func NewURL(url string) (URL, error) {
 	u := URL{
 		ID:      uuid.New().String(),
 		BaseURL: url,
 	}
-
-	if strings.Contains(u.BaseURL, " ") {
-		return URL{}, ErrURLContainSpace
+	if err := u.Validate(); err != nil {
+		return URL{}, err
 	}
-
 	return u, nil
+}
+
+// URL Validate ...
+func (u URL) Validate() error {
+	if strings.Contains(u.BaseURL, " ") {
+		return ErrURLContainSpace
+	}
+	return nil
 }

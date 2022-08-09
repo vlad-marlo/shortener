@@ -35,6 +35,9 @@ func (s *Store) urlExists(url model.URL) bool {
 
 // Create Url model to storage
 func (s *Store) Create(u model.URL) error {
+	if err := u.Validate(); err != nil {
+		return err
+	}
 	if s.urlExists(u) {
 		return store.ErrAlreadyExists
 	}

@@ -18,7 +18,9 @@ type Server struct {
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
-		srv:    http.Server{Addr: config.BindAddr},
+		srv: http.Server{
+			Addr: config.BindAddr,
+		},
 	}
 
 	s.configureRoutes()
@@ -30,6 +32,16 @@ func New(config *Config) *Server {
 		log.Print("store configured succesfully")
 	}
 
+	return s
+}
+
+func NewTestServer(config *Config) *Server {
+	s := &Server{
+		Config: config,
+	}
+	if err := s.configureStore(); err != nil {
+		log.Fatal(err)
+	}
 	return s
 }
 

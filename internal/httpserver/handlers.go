@@ -30,7 +30,6 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	// setting up response meta info
 	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
 
 	if r.URL.Path != "/" {
 		s.HandleErrorOr500(w, ErrIncorrectUrlPath)
@@ -57,7 +56,8 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// generate full url alike <base service url>/<url identificator>
+	// generate full url like <base service url>/<url identificator>
+	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
 	s.HandleErrorOr500(w, err)
 }
