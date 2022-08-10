@@ -13,13 +13,13 @@ import (
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/")
 	if id == "" {
-		http.Error(w, "The path argument is missing", http.StatusBadRequest)
+		s.HandleErrorOr400(w, errors.New("The path argument is missing"))
 		return
 	}
 
 	url, err := s.Store.GetByID(id)
 	if err != nil {
-		http.Error(w, "Where is no url with that id!", http.StatusBadRequest)
+		s.HandleErrorOr400(w, errors.New("Where is no url with that id!"))
 		return
 	}
 
@@ -32,34 +32,34 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	if r.URL.Path != "/" {
-		s.HandleErrorOr500(w, ErrIncorrectUrlPath)
+		s.HandleErrorOr400(w, ErrIncorrectUrlPath)
 		return
 	}
 
 	data, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
-	if s.HandleErrorOr500(w, err) {
+	if s.HandleErrorOr400(w, err) {
 		return
 	}
 	if len(data) == 0 {
-		s.HandleErrorOr500(w, ErrIncorrectRequestBody)
+		s.HandleErrorOr400(w, ErrIncorrectRequestBody)
 		return
 	}
 
 	u, err := model.NewURL(string(data))
-	if s.HandleErrorOr500(w, err) {
+	if s.HandleErrorOr400(w, err) {
 		return
 	}
 
-	if err = s.Store.Create(u); s.HandleErrorOr500(w, err) {
+	if err = s.Store.Create(u); s.HandleErrorOr400(w, err) {
 		return
 	}
 
 	// generate full url like <base service url>/<url identificator>
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
-	s.HandleErrorOr500(w, err)
+	s.HandleErrorOr400(w, err)
 }
 
 func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +72,6 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 		s.handleURLCreate(w, r)
 
 	default:
-		s.HandleErrorOr500(w, errors.New("Only POST and GET are allowed!"))
+		s.HandleErrorOr400(w, errors.New("Only POST and GET are allowed!"))
 	}
 }

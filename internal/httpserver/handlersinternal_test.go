@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,6 +80,16 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 				wantInternalServerError: true,
 			},
 		},
+		{
+			name: "empty data",
+			args: args{
+				urlPath:    "/",
+				urlToShort: "",
+			},
+			want: want{
+				wantInternalServerError: true,
+			},
+		},
 	}
 	s := NewTestServer(NewConfig())
 
@@ -135,6 +146,36 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 
 			res := w.Result()
 			require.Equal(t, http.StatusInternalServerError, res.StatusCode)
+		})
+	}
+}
+
+// only negative cases, because positive cases are in TestServer_HandleURLGetCreate
+func TestServer_HandleURLGet(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+	}{
+		{
+			name:   "empty id",
+			target: "/",
+		},
+		{
+			name:   "id doesn't exists",
+			target: "/" + uuid.New().String(),
+		},
+	}
+	s := NewTestServer(NewConfig())
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := http.HandlerFunc(s.handleURLGet)
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+			result := w.Result()
+
+			assert.Equal(t, http.StatusInternalServerError, result.StatusCode)
 		})
 	}
 }
