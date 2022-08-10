@@ -29,7 +29,7 @@ func NewURL(url string) (URL, error) {
 	return u, nil
 }
 
-// URL Validate ...
+// Validate Validate URL Validate ...
 func (u URL) Validate() error {
 	if strings.Contains(u.BaseURL, " ") {
 		return ErrURLContainSpace

@@ -12,10 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	s = New(NewConfig())
-)
-
 func TestServer_HandleURLGetCreate(t *testing.T) {
 	type args struct {
 		urlPath    string
