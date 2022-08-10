@@ -121,6 +121,7 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 			w = httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 			res = w.Result()
+			defer res.Body.Close()
 
 			require.Equal(t, tt.args.urlToShort, res.Header.Get("location"))
 			require.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
@@ -145,6 +146,7 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 			h.ServeHTTP(w, req)
 
 			res := w.Result()
+			defer res.Body.Close()
 			require.Equal(t, http.StatusInternalServerError, res.StatusCode)
 		})
 	}
@@ -173,9 +175,10 @@ func TestServer_HandleURLGet(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
-			result := w.Result()
+			res := w.Result()
+			defer res.Body.Close()
 
-			assert.Equal(t, http.StatusInternalServerError, result.StatusCode)
+			assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 		})
 	}
 }

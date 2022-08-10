@@ -13,13 +13,13 @@ import (
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/")
 	if id == "" {
-		s.HandleErrorOr400(w, errors.New("The path argument is missing"))
+		s.HandleErrorOr400(w, errors.New("the path argument is missing"))
 		return
 	}
 
 	url, err := s.Store.GetByID(id)
 	if err != nil {
-		s.HandleErrorOr400(w, errors.New("Where is no url with that id!"))
+		s.HandleErrorOr400(w, errors.New("where is no url with that id"))
 		return
 	}
 
@@ -32,7 +32,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	if r.URL.Path != "/" {
-		s.HandleErrorOr400(w, ErrIncorrectUrlPath)
+		s.HandleErrorOr400(w, ErrIncorrectURLPath)
 		return
 	}
 
@@ -72,6 +72,6 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 		s.handleURLCreate(w, r)
 
 	default:
-		s.HandleErrorOr400(w, errors.New("Only POST and GET are allowed!"))
+		s.HandleErrorOr400(w, errors.New("only POST and GET are allowed"))
 	}
 }

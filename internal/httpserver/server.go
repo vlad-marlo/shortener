@@ -4,13 +4,15 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
 type Server struct {
-	srv http.Server
+	*chi.Mux
 
+	srv    *http.Server
 	Store  store.Store
 	Config *Config
 }
@@ -18,9 +20,7 @@ type Server struct {
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
-		srv: http.Server{
-			Addr: config.BindAddr,
-		},
+		Mux:    chi.NewMux(),
 	}
 
 	s.configureRoutes()
@@ -38,6 +38,7 @@ func New(config *Config) *Server {
 func NewTestServer(config *Config) *Server {
 	s := &Server{
 		Config: config,
+		Mux:    chi.NewMux(),
 	}
 	if err := s.configureStore(); err != nil {
 		log.Fatal(err)
@@ -46,7 +47,8 @@ func NewTestServer(config *Config) *Server {
 }
 
 func (s *Server) configureRoutes() {
-	http.HandleFunc("/", s.handleURLGetCreate)
+	s.Post("/", s.handleURLCreate)
+	s.Get("/{id}", s.handleURLGet)
 }
 
 func (s *Server) configureStore() error {
