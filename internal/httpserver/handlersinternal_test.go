@@ -151,6 +151,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	for _, m := range unsupportedMethods {
 		t.Run(m, func(t *testing.T) {
 			res, _ := testRequest(t, ts, m, "/", nil)
+			defer res.Body.Close()
 			require.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
 		})
 	}
