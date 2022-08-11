@@ -71,9 +71,9 @@ func (s *Server) ListenAndServe() error {
 }
 
 // HandleErrorOr400 return true and handle error if err is not nil
-func (s *Server) HandleErrorOr400(w http.ResponseWriter, err error) bool {
+func (s *Server) HandleErrorOrStatus(w http.ResponseWriter, err error, status int) bool {
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), status)
 	}
 	return err != nil
 }

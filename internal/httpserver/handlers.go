@@ -13,13 +13,13 @@ import (
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		s.HandleErrorOr400(w, errors.New("the path argument is missing"))
+		s.HandleErrorOrStatus(w, errors.New("the path argument is missing"), http.StatusBadRequest)
 		return
 	}
 
 	url, err := s.Store.GetByID(id)
 	if err != nil {
-		s.HandleErrorOr400(w, errors.New("where is no url with that id"))
+		s.HandleErrorOrStatus(w, errors.New("where is no url with that id"), http.StatusNotFound)
 		return
 	}
 
@@ -31,35 +31,30 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	// setting up response meta info
 	w.Header().Set("Content-Type", "text/plain")
 
-	if r.URL.Path != "/" {
-		s.HandleErrorOr400(w, ErrIncorrectURLPath)
-		return
-	}
-
 	data, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
-	if s.HandleErrorOr400(w, err) {
+	if s.HandleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
 	if len(data) == 0 {
-		s.HandleErrorOr400(w, ErrIncorrectRequestBody)
+		s.HandleErrorOrStatus(w, ErrIncorrectRequestBody, http.StatusBadRequest)
 		return
 	}
 
 	u, err := model.NewURL(string(data))
-	if s.HandleErrorOr400(w, err) {
+	if s.HandleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
-	if err = s.Store.Create(u); s.HandleErrorOr400(w, err) {
+	if err = s.Store.Create(u); s.HandleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
 	// generate full url like <base service url>/<url identificator>
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
-	s.HandleErrorOr400(w, err)
+	s.HandleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
 func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +67,6 @@ func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
 		s.handleURLCreate(w, r)
 
 	default:
-		s.HandleErrorOr400(w, errors.New("only POST and GET are allowed"))
+		s.HandleErrorOrStatus(w, errors.New("only POST and GET are allowed"), http.StatusMethodNotAllowed)
 	}
 }

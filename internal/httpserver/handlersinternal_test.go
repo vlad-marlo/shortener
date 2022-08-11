@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -33,6 +34,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	}
 	type want struct {
 		wantInternalServerError bool
+		status                  int
 	}
 	tests := []struct {
 		name string
@@ -44,50 +46,55 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			name: "positive case #1",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "https://google.com",
+				urlToShort: "google.com",
 			},
 			want: want{
 				wantInternalServerError: false,
+				status:                  http.StatusCreated,
 			},
 		},
 		{
 			name: "positive case #2",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "https://ya.ru",
+				urlToShort: "ya.ru",
 			},
 			want: want{
 				wantInternalServerError: false,
+				status:                  http.StatusCreated,
 			},
 		},
 		{
 			name: "url already exists",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "https://ya.ru",
+				urlToShort: "ya.ru",
 			},
 			want: want{
 				wantInternalServerError: true,
+				status:                  http.StatusBadRequest,
 			},
 		},
 		{
 			name: "uncorrect target case",
 			args: args{
 				urlPath:    "/jkljk/",
-				urlToShort: "https://yandex.ru",
+				urlToShort: "yandex.ru",
 			},
 			want: want{
 				wantInternalServerError: true,
+				status:                  http.StatusNotFound,
 			},
 		},
 		{
 			name: "uncorrect url to short",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "https://hlt v.org",
+				urlToShort: "hlt v.org",
 			},
 			want: want{
 				wantInternalServerError: true,
+				status:                  http.StatusBadRequest,
 			},
 		},
 		{
@@ -98,30 +105,35 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			},
 			want: want{
 				wantInternalServerError: true,
+				status:                  http.StatusBadRequest,
 			},
 		},
 	}
 
-	s := NewTestServer(NewConfig("", "inmemory"))
+	s := New(NewConfig("", "inmemory"))
 	ts := httptest.NewServer(s.Router)
+	defer ts.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			res, url := testRequest(t, ts, http.MethodPost, tt.args.urlPath, strings.NewReader(tt.args.urlToShort))
+			res, url := testRequest(
+				t,
+				ts,
+				http.MethodPost,
+				tt.args.urlPath,
+				strings.NewReader(tt.args.urlToShort),
+			)
 
+			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {
-				assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 				return
 			}
-			assert.Equal(t, http.StatusCreated, res.StatusCode)
-
 			require.NotEmpty(t, url, "response body must be not empty")
 
-			res, _ = testRequest(t, ts, http.MethodGet, string(url), nil)
-
-			require.Equal(t, tt.args.urlToShort, res.Header.Get("location"))
-			require.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
+			id := strings.TrimPrefix(string(url), "http://localhost:8080")
+			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
+			require.Contains(t, fmt.Sprintf("%s", res.Request.URL), tt.args.urlToShort)
 		})
 	}
 
@@ -137,7 +149,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	for _, m := range unsupportedMethods {
 		t.Run(m, func(t *testing.T) {
 			res, _ := testRequest(t, ts, m, "/", nil)
-			require.Equal(t, http.StatusInternalServerError, res.StatusCode)
+			require.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
 		})
 	}
 }
@@ -147,23 +159,27 @@ func TestServer_HandleURLGet(t *testing.T) {
 	tests := []struct {
 		name   string
 		target string
+		status int
 	}{
 		{
 			name:   "empty id",
 			target: "/",
+			status: http.StatusMethodNotAllowed,
 		},
 		{
 			name:   "id doesn't exists",
 			target: "/" + uuid.New().String(),
+			status: http.StatusNotFound,
 		},
 	}
-	s := NewTestServer(NewConfig("", "inmemory"))
+	s := New(NewConfig("", "inmemory"))
 	ts := httptest.NewServer(s.Router)
+	defer ts.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, _ := testRequest(t, ts, http.MethodGet, tt.target, nil)
-			assert.Equal(t, http.StatusNotFound, res.StatusCode)
+			assert.Equal(t, tt.status, res.StatusCode)
 		})
 	}
 }
