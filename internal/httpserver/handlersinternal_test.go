@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -124,6 +123,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 				tt.args.urlPath,
 				strings.NewReader(tt.args.urlToShort),
 			)
+			defer res.Body.Close()
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {
@@ -133,7 +133,9 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 
 			id := strings.TrimPrefix(string(url), "http://localhost:8080")
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
-			require.Contains(t, fmt.Sprintf("%s", res.Request.URL), tt.args.urlToShort)
+			defer res.Body.Close()
+
+			require.Contains(t, res.Request.URL.String(), tt.args.urlToShort)
 		})
 	}
 
@@ -179,6 +181,7 @@ func TestServer_HandleURLGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, _ := testRequest(t, ts, http.MethodGet, tt.target, nil)
+			defer res.Body.Close()
 			assert.Equal(t, tt.status, res.StatusCode)
 		})
 	}
