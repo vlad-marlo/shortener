@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/")
+	id := chi.URLParam(r, "id")
 	if id == "" {
 		s.HandleErrorOr400(w, errors.New("the path argument is missing"))
 		return

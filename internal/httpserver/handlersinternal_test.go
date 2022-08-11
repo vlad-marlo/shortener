@@ -12,11 +12,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	s = New(NewConfig())
-)
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, body)
+	require.NoError(t, err)
 
-func TestServer_HandleURLGetCreate(t *testing.T) {
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, string(respBody)
+}
+
+func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	type args struct {
 		urlPath    string
 		urlToShort string
@@ -91,15 +101,14 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 			},
 		},
 	}
-	s := NewTestServer(NewConfig())
+
+	s := NewTestServer(NewConfig("", "inmemory"))
+	ts := httptest.NewServer(s.Router)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, tt.args.urlPath, strings.NewReader(tt.args.urlToShort))
-			w := httptest.NewRecorder()
-			handler := http.HandlerFunc(s.handleURLGetCreate)
-			handler.ServeHTTP(w, req)
-			res := w.Result()
+
+			res, url := testRequest(t, ts, http.MethodPost, tt.args.urlPath, strings.NewReader(tt.args.urlToShort))
 
 			if tt.want.wantInternalServerError {
 				assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
@@ -107,21 +116,9 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 			}
 			assert.Equal(t, http.StatusCreated, res.StatusCode)
 
-			defer res.Body.Close()
-			url, err := io.ReadAll(res.Body)
-
-			require.NoError(t, err, "error in response body")
 			require.NotEmpty(t, url, "response body must be not empty")
 
-			req = httptest.NewRequest(
-				http.MethodGet,
-				string(url),
-				nil,
-			)
-			w = httptest.NewRecorder()
-			handler.ServeHTTP(w, req)
-			res = w.Result()
-			defer res.Body.Close()
+			res, _ = testRequest(t, ts, http.MethodGet, string(url), nil)
 
 			require.Equal(t, tt.args.urlToShort, res.Header.Get("location"))
 			require.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
@@ -139,14 +136,7 @@ func TestServer_HandleURLGetCreate(t *testing.T) {
 	}
 	for _, m := range unsupportedMethods {
 		t.Run(m, func(t *testing.T) {
-			req := httptest.NewRequest(m, "/", nil)
-			w := httptest.NewRecorder()
-
-			h := http.HandlerFunc(s.handleURLGetCreate)
-			h.ServeHTTP(w, req)
-
-			res := w.Result()
-			defer res.Body.Close()
+			res, _ := testRequest(t, ts, m, "/", nil)
 			require.Equal(t, http.StatusInternalServerError, res.StatusCode)
 		})
 	}
@@ -167,18 +157,13 @@ func TestServer_HandleURLGet(t *testing.T) {
 			target: "/" + uuid.New().String(),
 		},
 	}
-	s := NewTestServer(NewConfig())
+	s := NewTestServer(NewConfig("", "inmemory"))
+	ts := httptest.NewServer(s.Router)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := http.HandlerFunc(s.handleURLGet)
-			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
-			w := httptest.NewRecorder()
-			handler.ServeHTTP(w, req)
-			res := w.Result()
-			defer res.Body.Close()
-
-			assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+			res, _ := testRequest(t, ts, http.MethodGet, tt.target, nil)
+			assert.Equal(t, http.StatusNotFound, res.StatusCode)
 		})
 	}
 }

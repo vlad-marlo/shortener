@@ -10,17 +10,17 @@ import (
 )
 
 type Server struct {
-	*chi.Mux
+	chi.Router
 
-	srv    *http.Server
 	Store  store.Store
 	Config *Config
 }
 
+// New ...
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
-		Mux:    chi.NewMux(),
+		Router: chi.NewRouter(),
 	}
 
 	s.configureRoutes()
@@ -35,10 +35,11 @@ func New(config *Config) *Server {
 	return s
 }
 
+// NewTestServer ...
 func NewTestServer(config *Config) *Server {
 	s := &Server{
 		Config: config,
-		Mux:    chi.NewMux(),
+		Router: chi.NewMux(),
 	}
 	if err := s.configureStore(); err != nil {
 		log.Fatal(err)
@@ -46,11 +47,13 @@ func NewTestServer(config *Config) *Server {
 	return s
 }
 
+// configureRoutes ...
 func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
 }
 
+// configureStore ...
 func (s *Server) configureStore() error {
 	switch s.Config.StorageType {
 	case "inmemory":
@@ -62,11 +65,12 @@ func (s *Server) configureStore() error {
 	return nil
 }
 
+// ListenAndServe ...
 func (s *Server) ListenAndServe() error {
-	return s.srv.ListenAndServe()
+	return http.ListenAndServe(s.Config.BindAddr, s.Router)
 }
 
-// return true if err is not nil
+// HandleErrorOr400 return true and handle error if err is not nil
 func (s *Server) HandleErrorOr400(w http.ResponseWriter, err error) bool {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
