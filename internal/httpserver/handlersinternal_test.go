@@ -64,17 +64,6 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "url already exists",
-			args: args{
-				urlPath:    "/",
-				urlToShort: "ya.ru",
-			},
-			want: want{
-				wantInternalServerError: true,
-				status:                  http.StatusBadRequest,
-			},
-		},
-		{
 			name: "uncorrect target case",
 			args: args{
 				urlPath:    "/jkljk/",
@@ -115,7 +104,6 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			res, url := testRequest(
 				t,
 				ts,
