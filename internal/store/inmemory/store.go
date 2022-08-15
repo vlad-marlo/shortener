@@ -10,18 +10,22 @@ import (
 type Store struct {
 	urls map[string]model.URL
 	mu   sync.Mutex
+	test bool
 }
 
 func New() *Store {
 	return &Store{
 		urls: make(map[string]model.URL),
+		test: false,
 	}
 }
 
 // GetByID Returns BaseURL or URL object by ID
 func (s *Store) GetByID(id string) (model.URL, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if !s.test {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+	}
 
 	if u, ok := s.urls[id]; ok {
 		return u, nil
@@ -31,8 +35,10 @@ func (s *Store) GetByID(id string) (model.URL, error) {
 
 // Create Url model to storage
 func (s *Store) Create(u model.URL) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if !s.test {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+	}
 
 	if err := u.Validate(); err != nil {
 		return err

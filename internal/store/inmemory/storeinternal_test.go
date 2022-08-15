@@ -62,19 +62,20 @@ func TestStore_Create(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			s := &Store{
 				urls: tt.fields.urls,
+				test: true,
 			}
 			err := s.Create(tt.u)
+			_, ok := s.urls[tt.u.ID]
 			if tt.wantErr {
 				require.Error(t, err, "Create() error is nil")
 				if err != store.ErrAlreadyExists {
-					assert.NotContains(t, s.urls, tt.u)
+					assert.False(t, ok)
 				}
 			} else {
-				assert.NoError(t, err, "Create() error = %v", err)
-				assert.Contains(t, s.urls, tt.u.ID)
+				require.NoError(t, err, "Create() error = %v", err)
+				assert.True(t, ok)
 			}
 		})
 	}
