@@ -10,11 +10,12 @@ import (
 var (
 	ErrURLContainSpace = errors.New("url must have no spaces in it")
 	ErrURLTooShort     = errors.New("url must be 4 or more chars long")
+	ErrURLAlreadyShort = errors.New("url already shortened")
 )
 
 type URL struct {
-	ID      string
-	BaseURL string
+	ID      string `json:"result,omitempty"`
+	BaseURL string `json:"url"`
 }
 
 // NewURL ...
@@ -37,5 +38,14 @@ func (u URL) Validate() error {
 	if len(u.BaseURL) < 4 {
 		return ErrURLTooShort
 	}
+	return nil
+}
+
+// ShortURL ...
+func (u URL) ShortURL() error {
+	if u.ID != "" {
+		return ErrURLAlreadyShort
+	}
+	u.ID = uuid.New().String()
 	return nil
 }

@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -55,4 +56,40 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+}
+
+func (s *Server) handleURLCreateJSON() http.HandlerFunc {
+	type response struct {
+		ID string `json:"result"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var u model.URL
+		req, err := io.ReadAll(r.Body)
+
+		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+			return
+		}
+		json.Unmarshal(req, &u)
+
+		if err = u.Validate(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+			return
+		}
+		if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+			return
+		}
+
+		resp := response{
+			ID: fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID),
+		}
+		res, err := json.Marshal(resp)
+		if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, err = w.Write(res)
+		s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+	}
 }

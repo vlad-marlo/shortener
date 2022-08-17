@@ -51,6 +51,7 @@ func NewTestServer(config *Config) *Server {
 func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
+	s.Post("/api/shorten", s.handleURLCreateJSON())
 }
 
 // configureStore ...
