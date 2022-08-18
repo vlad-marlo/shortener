@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"log"
 	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -16,7 +17,7 @@ type Store struct {
 func New() *Store {
 	return &Store{
 		urls: make(map[string]model.URL),
-		test: false,
+		test: true,
 	}
 }
 
@@ -28,6 +29,7 @@ func (s *Store) GetByID(id string) (model.URL, error) {
 	}
 
 	if u, ok := s.urls[id]; ok {
+		log.Printf("get url %v\n", u)
 		return u, nil
 	}
 	return model.URL{}, store.ErrNotFound
@@ -47,5 +49,6 @@ func (s *Store) Create(u model.URL) error {
 		return store.ErrAlreadyExists
 	}
 	s.urls[u.ID] = u
+	log.Printf("created url %v\n", u)
 	return nil
 }

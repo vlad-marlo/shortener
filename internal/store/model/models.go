@@ -42,7 +42,7 @@ func (u URL) Validate() error {
 }
 
 // ShortURL ...
-func (u URL) ShortURL() error {
+func (u *URL) ShortURL() error {
 	if u.ID != "" {
 		return ErrURLAlreadyShort
 	}
