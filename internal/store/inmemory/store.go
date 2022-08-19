@@ -1,7 +1,6 @@
 package inmemory
 
 import (
-	"log"
 	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -9,46 +8,49 @@ import (
 )
 
 type Store struct {
+	mu sync.Mutex
+
 	urls map[string]model.URL
-	mu   sync.Mutex
 	test bool
 }
 
+// New ...
 func New() *Store {
 	return &Store{
 		urls: make(map[string]model.URL),
-		test: true,
+		test: false,
 	}
 }
 
-// GetByID Returns BaseURL or URL object by ID
-func (s *Store) GetByID(id string) (model.URL, error) {
+// GetByID returns URL object and error by URL ID
+func (s *Store) GetByID(id string) (u model.URL, err error) {
 	if !s.test {
-		s.mu.Lock()
 		defer s.mu.Unlock()
+		s.mu.Lock()
 	}
 
-	if u, ok := s.urls[id]; ok {
-		log.Printf("get url %v\n", u)
-		return u, nil
+	err = nil
+	u, ok := s.urls[id]
+	if !ok {
+		err = store.ErrAlreadyExists
 	}
-	return model.URL{}, store.ErrNotFound
+	return
 }
 
-// Create Url model to storage
-func (s *Store) Create(u model.URL) error {
+// Create URL model to storage
+func (s *Store) Create(u model.URL) (err error) {
 	if !s.test {
-		s.mu.Lock()
 		defer s.mu.Unlock()
+		s.mu.Lock()
 	}
 
-	if err := u.Validate(); err != nil {
-		return err
+	if err = u.Validate(); err != nil {
+		return
 	}
 	if _, ok := s.urls[u.ID]; ok {
-		return store.ErrAlreadyExists
+		err = store.ErrAlreadyExists
+		return
 	}
 	s.urls[u.ID] = u
-	log.Printf("created url %v\n", u)
-	return nil
+	return
 }

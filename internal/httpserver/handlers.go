@@ -12,11 +12,9 @@ import (
 )
 
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
-	if id == "" {
-		s.handleErrorOrStatus(w, errors.New("the path argument is missing"), http.StatusBadRequest)
-		return
-	}
+	// log.Printf(id)
 
 	url, err := s.Store.GetByID(id)
 	if err != nil {
@@ -65,7 +63,6 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var u model.URL
-		w.Header().Set("Content-Type", "application/json")
 		req, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 
@@ -77,20 +74,18 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 		if err = (&u).ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 			return
 		}
-		if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 			return
-		}
-		if _, err = s.Store.GetByID(u.ID); err != nil {
-			panic("wtf url didn't created")
 		}
 
 		resp := response{
 			ResultURL: fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID),
 		}
 		res, err := json.Marshal(resp)
-		if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 
 		w.WriteHeader(http.StatusCreated)
 		_, err = w.Write(res)

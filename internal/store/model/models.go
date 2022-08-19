@@ -43,9 +43,6 @@ func (u URL) Validate() error {
 
 // ShortURL ...
 func (u *URL) ShortURL() error {
-	if u.ID != "" {
-		return ErrURLAlreadyShort
-	}
 	u.ID = uuid.New().String()
-	return nil
+	return (*u).Validate()
 }

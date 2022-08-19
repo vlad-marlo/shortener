@@ -226,19 +226,6 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			},
 		},
 		{
-			name: "uncorrect target case",
-			args: args{
-				urlPath: "/api/shorten",
-				request: request{
-					URL: "yandex.ru",
-				},
-			},
-			want: want{
-				wantInternalServerError: true,
-				status:                  http.StatusNotFound,
-			},
-		},
-		{
 			name: "uncorrect url to short",
 			args: args{
 				urlPath: "/api/shorten",
