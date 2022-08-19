@@ -204,7 +204,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			args: args{
 				urlPath: "/api/shorten",
 				request: request{
-					URL: "google.com",
+					URL: "https://www.google.com",
 				},
 			},
 			want: want{
@@ -217,7 +217,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			args: args{
 				urlPath: "/api/shorten",
 				request: request{
-					URL: "ya.ru",
+					URL: "https://ya.ru",
 				},
 			},
 			want: want{
@@ -284,7 +284,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
 			defer res.Body.Close()
 
-			require.Contains(t, res.Request.URL, tt.args.request.URL)
+			require.Contains(t, res.Request.URL.String(), tt.args.request.URL)
 		})
 	}
 }
