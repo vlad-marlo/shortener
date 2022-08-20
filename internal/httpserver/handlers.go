@@ -14,7 +14,6 @@ import (
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
-	// log.Printf(id)
 
 	url, err := s.Store.GetByID(id)
 	if err != nil {
@@ -52,7 +51,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 
 	// generate full url like <base service url>/<url identificator>
 	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
+	_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
@@ -79,7 +78,7 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 		}
 
 		resp := response{
-			ResultURL: fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID),
+			ResultURL: fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
 		}
 		res, err := json.Marshal(resp)
 		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
