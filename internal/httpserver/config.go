@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -13,12 +14,12 @@ type Config struct {
 }
 
 // NewConfig return pointer to config with params. Empty params will be set by default
-func NewConfig(BindAddr string, StorageType string) (*Config, error) {
+func NewConfig(BindAddr string, StorageType string) *Config {
 	c := &Config{
 		StorageType: "inmemory",
 	}
-	if err := env.Parse(&c); err != nil {
-		return c, err
+	if err := env.Parse(c); err != nil {
+		log.Fatal(err)
 	}
 	if c.BindAddr == "" {
 		if BindAddr != "" {
@@ -30,8 +31,8 @@ func NewConfig(BindAddr string, StorageType string) (*Config, error) {
 	if c.BaseURL == "" {
 		c.BaseURL = fmt.Sprintf("http://%s", c.BindAddr)
 	}
-	if c.StorageType != "" {
+	if StorageType != "" {
 		c.StorageType = StorageType
 	}
-	return c, nil
+	return c
 }

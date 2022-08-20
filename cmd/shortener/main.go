@@ -7,10 +7,7 @@ import (
 )
 
 func main() {
-	config, err := httpserver.NewConfig("localhost:8080", "inmemory")
-	if err != nil {
-		log.Fatal(err)
-	}
+	config := httpserver.NewConfig("localhost:8080", "inmemory")
 	s := httpserver.New(config)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)
