@@ -61,16 +61,16 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var u model.URL
+		var u *model.URL
 		req, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 
 		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 			return
 		}
-		json.Unmarshal(req, &u)
+		json.Unmarshal(req, u)
 
-		if err = (&u).ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 			return
 		}
 		if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {

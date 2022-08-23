@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
@@ -59,6 +60,9 @@ func (s *Server) configureStore() error {
 	switch s.Config.StorageType {
 	case "inmemory":
 		s.Store = inmemory.New()
+
+	case "filebased":
+		s.Store = filebased.New()
 
 	default:
 		return ErrIncorrectStoreType
