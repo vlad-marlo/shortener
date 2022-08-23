@@ -10,20 +10,20 @@ import (
 type Store struct {
 	mu sync.Mutex
 
-	urls map[string]model.URL
+	urls map[string]*model.URL
 	test bool
 }
 
 // New ...
 func New() *Store {
 	return &Store{
-		urls: make(map[string]model.URL),
+		urls: make(map[string]*model.URL),
 		test: false,
 	}
 }
 
 // GetByID returns URL object and error by URL ID
-func (s *Store) GetByID(id string) (u model.URL, err error) {
+func (s *Store) GetByID(id string) (u *model.URL, err error) {
 	if !s.test {
 		defer s.mu.Unlock()
 		s.mu.Lock()
@@ -38,7 +38,7 @@ func (s *Store) GetByID(id string) (u model.URL, err error) {
 }
 
 // Create URL model to storage
-func (s *Store) Create(u model.URL) (err error) {
+func (s *Store) Create(u *model.URL) (err error) {
 	if !s.test {
 		defer s.mu.Unlock()
 		s.mu.Lock()

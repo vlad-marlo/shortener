@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	googleURL = model.URL{
+	googleURL = &model.URL{
 		ID:      "goo",
 		BaseURL: "https://google.com/",
 	}
-	yandexURL = model.URL{
+	yandexURL = &model.URL{
 		ID:      "ya",
 		BaseURL: "yandex.ru",
 	}
@@ -22,19 +22,19 @@ var (
 
 func TestStore_Create(t *testing.T) {
 	type fields struct {
-		urls map[string]model.URL
+		urls map[string]*model.URL
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		u       model.URL
+		u       *model.URL
 		wantErr bool
 	}{
 		{
 			name: "with empty urls",
 			u:    googleURL,
 			fields: fields{
-				urls: map[string]model.URL{},
+				urls: map[string]*model.URL{},
 			},
 			wantErr: false,
 		},
@@ -42,7 +42,7 @@ func TestStore_Create(t *testing.T) {
 			name: "with duplicates",
 			u:    googleURL,
 			fields: fields{
-				urls: map[string]model.URL{
+				urls: map[string]*model.URL{
 					googleURL.ID: googleURL,
 					yandexURL.ID: yandexURL,
 				},
@@ -53,7 +53,7 @@ func TestStore_Create(t *testing.T) {
 			name: "without duplicates",
 			u:    googleURL,
 			fields: fields{
-				urls: map[string]model.URL{
+				urls: map[string]*model.URL{
 					yandexURL.ID: yandexURL,
 				},
 			},
@@ -83,7 +83,7 @@ func TestStore_Create(t *testing.T) {
 
 func TestStore_GetByID(t *testing.T) {
 	type fields struct {
-		urls map[string]model.URL
+		urls map[string]*model.URL
 	}
 	type args struct {
 		id string

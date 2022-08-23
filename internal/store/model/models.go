@@ -19,19 +19,19 @@ type URL struct {
 }
 
 // NewURL ...
-func NewURL(url string) (URL, error) {
-	u := URL{
+func NewURL(url string) (*URL, error) {
+	u := &URL{
 		ID:      uuid.New().String(),
 		BaseURL: url,
 	}
 	if err := u.Validate(); err != nil {
-		return URL{}, err
+		return nil, err
 	}
 	return u, nil
 }
 
 // URL Validate ...
-func (u URL) Validate() error {
+func (u *URL) Validate() error {
 	if strings.Contains(u.BaseURL, " ") {
 		return ErrURLContainSpace
 	}
@@ -44,5 +44,5 @@ func (u URL) Validate() error {
 // ShortURL ...
 func (u *URL) ShortURL() error {
 	u.ID = uuid.New().String()
-	return (*u).Validate()
+	return u.Validate()
 }
