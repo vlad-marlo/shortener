@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - increment_5
+      - increment_6
 
 jobs:
 
@@ -81,18 +81,18 @@ jobs:
               -server-host=$SERVER_HOST \
               -server-port=$SERVER_PORT \
               -server-base-url="http://$SERVER_HOST:$SERVER_PORT"
-      #
-      # - name: "Code increment #6"
-      #   if: always()
-      #   run: |
-      #     SERVER_PORT=$(random unused-port)
-      #     TEMP_FILE=$(random tempfile)
-      #     shortenertest -test.v -test.run=^TestIteration6$ \
-      #         -binary-path=cmd/shortener/shortener \
-      #         -server-port=$SERVER_PORT \
-      #         -file-storage-path=$TEMP_FILE \
-      #         -source-path=.
-      #
+
+      - name: "Code increment #6"
+        if: always()
+        run: |
+          SERVER_PORT=$(random unused-port)
+          TEMP_FILE=$(random tempfile)
+          shortenertest -test.v -test.run=^TestIteration6$ \
+              -binary-path=cmd/shortener/shortener \
+              -server-port=$SERVER_PORT \
+              -file-storage-path=$TEMP_FILE \
+              -source-path=.
+
       # - name: "Code increment #7"
       #   if: always()
       #   run: |
