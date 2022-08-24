@@ -10,6 +10,11 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
+const (
+	InMemoryStorage  = "inmemory"
+	FileBasedStorage = "filebased"
+)
+
 type Server struct {
 	chi.Router
 
@@ -58,10 +63,10 @@ func (s *Server) configureRoutes() {
 // configureStore ...
 func (s *Server) configureStore() error {
 	switch s.Config.StorageType {
-	case "inmemory":
+	case InMemoryStorage:
 		s.Store = inmemory.New()
 
-	case "filebased":
+	case FileBasedStorage:
 		s.Store = filebased.New()
 
 	default:

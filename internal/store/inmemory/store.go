@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"log"
 	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -16,6 +17,7 @@ type Store struct {
 
 // New ...
 func New() *Store {
+	log.Print("successfully configured inmemory storage")
 	return &Store{
 		urls: make(map[string]*model.URL),
 		test: false,

@@ -10,41 +10,47 @@ import (
 )
 
 type Store struct {
-	filename string `env:"FILE_STORAGE_PATH"`
+	Filename string `env:"FILE_STORAGE_PATH"`
 }
 
-type urls struct {
+type URLs struct {
 	URLs map[string]*model.URL `json:"urls"`
 }
 
 func New() store.Store {
 	s := &Store{}
 	if err := env.Parse(s); err != nil {
+		log.Print(err)
 		return inmemory.New()
 	}
-	if _, err := newProducer(s.filename); err != nil {
+	log.Print(s.Filename)
+	p, err := newProducer(s.Filename)
+	defer p.Close()
+	if err != nil {
+		log.Print(err)
 		return inmemory.New()
 	}
-	log.Print("successfully configured filebased store")
+	log.Print("successfully configured file-based store")
 	return s
 }
 
 func (s *Store) GetByID(id string) (u *model.URL, err error) {
-	p, err := newProducer(s.filename)
+	p, err := newProducer(s.Filename)
 	defer p.Close()
 	if err != nil {
 		return nil, err
 	}
-	u, err = p.ReadURL(id)
+	u, err = p.GetURLByID(id)
 	return
 }
 
-func (s *Store) Create(u *model.URL) (err error) {
-	p, err := newProducer(s.filename)
+func (s *Store) Create(u *model.URL) error {
+	p, err := newProducer(s.Filename)
 	defer p.Close()
 	if err != nil {
-		return
+		return err
 	}
-	err = p.WriteURL(u)
-	return
+	err = p.CreateURL(u)
+	log.Print(err)
+	return err
 }

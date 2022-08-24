@@ -61,7 +61,7 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var u *model.URL
+		u := &model.URL{}
 		req, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 
