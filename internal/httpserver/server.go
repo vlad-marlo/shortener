@@ -30,19 +30,19 @@ func New(config *Config) *Server {
 	}
 
 	s.configureRoutes()
-	log.Print("routes configured succesfully")
+	log.Print("routes configured successfully")
 
 	if err := s.configureStore(); err != nil {
 		log.Fatal(err)
 	} else {
-		log.Print("store configured succesfully")
+		log.Print("store configured successfully")
 	}
 
 	return s
 }
 
 // NewTestServer ...
-func NewTestServer(config *Config) *Server {
+func _(config *Config) *Server {
 	s := &Server{
 		Config: config,
 		Router: chi.NewMux(),

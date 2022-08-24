@@ -10,7 +10,6 @@ import (
 var (
 	ErrURLContainSpace = errors.New("url must have no spaces in it")
 	ErrURLTooShort     = errors.New("url must be 4 or more chars long")
-	ErrURLAlreadyShort = errors.New("url already shortened")
 )
 
 type URL struct {
@@ -30,7 +29,7 @@ func NewURL(url string) (*URL, error) {
 	return u, nil
 }
 
-// URL Validate ...
+// Validate ...
 func (u *URL) Validate() error {
 	if strings.Contains(u.BaseURL, " ") {
 		return ErrURLContainSpace

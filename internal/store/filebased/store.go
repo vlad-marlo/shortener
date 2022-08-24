@@ -50,7 +50,5 @@ func (s *Store) Create(u *model.URL) error {
 	if err != nil {
 		return err
 	}
-	err = p.CreateURL(u)
-	log.Print(err)
-	return err
+	return p.CreateURL(u)
 }

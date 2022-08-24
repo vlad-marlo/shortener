@@ -37,6 +37,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		wantInternalServerError bool
 		status                  int
 	}
+	//goland:noinspection SpellCheckingInspection
 	tests := []struct {
 		name string
 
@@ -66,7 +67,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "uncorrect target case",
+			name: "incorrect target case",
 			args: args{
 				urlPath:    "/jkljk/",
 				urlToShort: "yandex.ru",
@@ -226,7 +227,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			},
 		},
 		{
-			name: "uncorrect url to short",
+			name: "incorrect url to short",
 			args: args{
 				urlPath: "/api/shorten",
 				request: request{

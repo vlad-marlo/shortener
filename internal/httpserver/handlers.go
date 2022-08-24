@@ -30,7 +30,9 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	data, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(r.Body)
 
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
@@ -63,12 +65,17 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u := &model.URL{}
 		req, err := io.ReadAll(r.Body)
-		defer r.Body.Close()
+		defer func(Body io.ReadCloser) {
+			_ = Body.Close()
+		}(r.Body)
 
 		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 			return
 		}
-		json.Unmarshal(req, u)
+		err = json.Unmarshal(req, u)
+		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+			return
+		}
 
 		if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 			return
