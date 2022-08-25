@@ -2,6 +2,7 @@ package filebased
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 
@@ -27,9 +28,16 @@ func newProducer(filename string) (*producer, error) {
 	}, nil
 }
 
-func (p *producer) getURLs() (*URLs, error) {
-	data := &URLs{}
-	if err := p.decoder.Decode(&data); err != nil {
+func (p *producer) truncateFile() error {
+	fileInfo, err := p.file.Stat()
+	if err != nil {
+		return err
+	}
+	return p.file.Truncate(fileInfo.Size())
+}
+
+func (p *producer) getURLs() (data *URLs, err error) {
+	if err = p.decoder.Decode(&data); err != nil && err != io.EOF {
 		return nil, err
 	}
 	log.Print("successfully get urls")
@@ -41,7 +49,14 @@ func (p *producer) CreateURL(u *model.URL) error {
 	if err != nil {
 		return err
 	}
+	if err = p.truncateFile(); err != nil {
+		return err
+	}
 	if _, ok := data.URLs[u.ID]; ok {
+		// без этого при попытке сохранить урл с существующим ID все данные удалятся
+		if err = p.encoder.Encode(&data); err != nil {
+			return err
+		}
 		return store.ErrAlreadyExists
 	}
 	data.URLs[u.ID] = u
