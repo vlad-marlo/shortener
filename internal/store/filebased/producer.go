@@ -2,8 +2,6 @@ package filebased
 
 import (
 	"encoding/json"
-	"io"
-	"log"
 	"os"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -12,7 +10,6 @@ import (
 
 type producer struct {
 	file    *os.File
-	decoder *json.Decoder
 	encoder *json.Encoder
 }
 
@@ -24,55 +21,16 @@ func newProducer(filename string) (*producer, error) {
 	return &producer{
 		file:    file,
 		encoder: json.NewEncoder(file),
-		decoder: json.NewDecoder(file),
 	}, nil
 }
 
-func (p *producer) truncateFile() error {
-	fileInfo, err := p.file.Stat()
-	if err != nil {
-		return err
-	}
-	return p.file.Truncate(fileInfo.Size())
-}
-
-func (p *producer) getURLs() (data *URLs, err error) {
-	if err = p.decoder.Decode(&data); err != nil && err != io.EOF {
-		return nil, err
-	}
-	log.Print("successfully get urls")
-	return data, nil
-}
-
 func (p *producer) CreateURL(u *model.URL) error {
-	data, err := p.getURLs()
-	if err != nil {
-		return err
-	}
-	if err = p.truncateFile(); err != nil {
-		return err
-	}
-	if _, ok := data.URLs[u.ID]; ok {
-		// без этого при попытке сохранить урл с существующим ID все данные удалятся
-		if err = p.encoder.Encode(&data); err != nil {
-			return err
-		}
-		return store.ErrAlreadyExists
-	}
-	data.URLs[u.ID] = u
-	return p.encoder.Encode(&data)
+	return p.encoder.Encode(&u)
 }
 
-func (p *producer) GetURLByID(id string) (*model.URL, error) {
-	data, err := p.getURLs()
-	if err != nil {
-		return nil, err
-	}
-	u, ok := data.URLs[id]
-	if !ok {
-		return nil, store.ErrNotFound
-	}
-	return u, nil
+func (p *producer) GetURLByID(id string) (u *model.URL, err error) {
+	// TODO: write getting url logic
+	return nil, store.ErrNotFound
 }
 
 func (p *producer) Close() error {

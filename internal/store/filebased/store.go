@@ -10,11 +10,7 @@ import (
 )
 
 type Store struct {
-	Filename string `env:"FILE_STORAGE_PATH"`
-}
-
-type URLs struct {
-	URLs map[string]*model.URL `json:"urls"`
+	Filename string `env:"FILE_STORAGE_PATH" envDefault:"data.json"`
 }
 
 func New() store.Store {
