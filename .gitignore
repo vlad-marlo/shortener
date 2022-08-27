@@ -25,4 +25,4 @@ vendor/
 .vscode
 
 # Data path for file storage
-data.json
+*.json
