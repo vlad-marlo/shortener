@@ -17,7 +17,12 @@ func New(filename string) store.Store {
 		Filename: filename,
 	}
 	p, err := newProducer(s.Filename)
-	defer p.Close()
+	defer func() {
+		err = p.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 	if err != nil {
 		log.Print(err)
 		return inmemory.New()
@@ -28,7 +33,12 @@ func New(filename string) store.Store {
 
 func (s *Store) GetByID(id string) (u *model.URL, err error) {
 	p, err := newProducer(s.Filename)
-	defer p.Close()
+	defer func() {
+		err = p.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +48,12 @@ func (s *Store) GetByID(id string) (u *model.URL, err error) {
 
 func (s *Store) Create(u *model.URL) error {
 	p, err := newProducer(s.Filename)
-	defer p.Close()
+	defer func() {
+		err = p.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 	if err != nil {
 		return err
 	}

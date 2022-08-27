@@ -88,12 +88,23 @@ func TestStore_GetByID(t *testing.T) {
 	type args struct {
 		id string
 	}
-	var tests []struct {
+	tests := []struct {
 		name    string
 		fields  fields
 		args    args
 		want    model.URL
 		wantErr bool
+	}{
+		{
+			name: "negative case with empty urls",
+			fields: fields{
+				urls: map[string]*model.URL{},
+			},
+			args: args{
+				id: "xd",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
