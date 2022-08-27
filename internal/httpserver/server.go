@@ -17,13 +17,14 @@ type Server struct {
 	Config *Config
 }
 
-// New ...
+// New return new configured server with params from config object
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
 		Router: chi.NewRouter(),
 	}
 
+	s.configureMiddlewares()
 	s.configureRoutes()
 	log.Print("routes configured successfully")
 
@@ -41,6 +42,11 @@ func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
 	s.Post("/api/shorten", s.handleURLCreateJSON())
+}
+
+// configureMiddlewares ...
+func (s *Server) configureMiddlewares() {
+	s.Use(s.gzipCompression)
 }
 
 // configureStore ...
