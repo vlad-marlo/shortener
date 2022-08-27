@@ -67,7 +67,7 @@ func (s *Server) configureStore() error {
 		s.Store = inmemory.New()
 
 	case FileBasedStorage:
-		s.Store = filebased.New()
+		s.Store = filebased.New(s.Config.FilePath)
 
 	default:
 		return ErrIncorrectStoreType

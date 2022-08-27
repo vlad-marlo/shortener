@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	config := httpserver.NewConfig("localhost:8080", httpserver.FileBasedStorage)
+	config := httpserver.NewConfig(httpserver.FileBasedStorage)
 	s := httpserver.New(config)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)

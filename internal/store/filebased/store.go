@@ -3,23 +3,19 @@ package filebased
 import (
 	"log"
 
-	"github.com/caarlos0/env/v6"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 type Store struct {
-	Filename string `env:"FILE_STORAGE_PATH" envDefault:"data.json"`
+	Filename string
 }
 
-func New() store.Store {
-	s := &Store{}
-	if err := env.Parse(s); err != nil {
-		log.Print(err)
-		return inmemory.New()
+func New(filename string) store.Store {
+	s := &Store{
+		Filename: filename,
 	}
-	log.Print(s.Filename)
 	p, err := newProducer(s.Filename)
 	defer p.Close()
 	if err != nil {
