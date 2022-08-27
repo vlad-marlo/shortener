@@ -3,7 +3,6 @@ package filebased
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"os"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -35,7 +34,6 @@ func (p *producer) CreateURL(u *model.URL) error {
 func (p *producer) GetURLByID(id string) (u *model.URL, err error) {
 	for {
 		err := p.decoder.Decode(&u)
-		log.Println(u)
 		if u != nil && u.ID == id {
 			return u, nil
 		}
