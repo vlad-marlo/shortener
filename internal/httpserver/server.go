@@ -10,11 +10,6 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
-const (
-	InMemoryStorage  = "inmemory"
-	FileBasedStorage = "filebased"
-)
-
 type Server struct {
 	chi.Router
 
@@ -41,18 +36,6 @@ func New(config *Config) *Server {
 	return s
 }
 
-// NewTestServer ...
-func _(config *Config) *Server {
-	s := &Server{
-		Config: config,
-		Router: chi.NewMux(),
-	}
-	if err := s.configureStore(); err != nil {
-		log.Fatal(err)
-	}
-	return s
-}
-
 // configureRoutes ...
 func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
@@ -63,10 +46,10 @@ func (s *Server) configureRoutes() {
 // configureStore ...
 func (s *Server) configureStore() error {
 	switch s.Config.StorageType {
-	case InMemoryStorage:
+	case store.InMemoryStorage:
 		s.Store = inmemory.New()
 
-	case FileBasedStorage:
+	case store.FileBasedStorage:
 		s.Store = filebased.New(s.Config.FilePath)
 
 	default:
