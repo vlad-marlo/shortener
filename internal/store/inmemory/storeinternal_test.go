@@ -4,16 +4,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 var (
-	googleURL = model.URL{
+	googleURL = &model.URL{
 		ID:      "goo",
 		BaseURL: "https://google.com/",
 	}
-	yandexURL = model.URL{
+	yandexURL = &model.URL{
 		ID:      "ya",
 		BaseURL: "yandex.ru",
 	}
@@ -21,19 +22,19 @@ var (
 
 func TestStore_Create(t *testing.T) {
 	type fields struct {
-		urls []model.URL
+		urls map[string]*model.URL
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		u       model.URL
+		u       *model.URL
 		wantErr bool
 	}{
 		{
 			name: "with empty urls",
 			u:    googleURL,
 			fields: fields{
-				urls: []model.URL{},
+				urls: map[string]*model.URL{},
 			},
 			wantErr: false,
 		},
@@ -41,28 +42,40 @@ func TestStore_Create(t *testing.T) {
 			name: "with duplicates",
 			u:    googleURL,
 			fields: fields{
-				urls: []model.URL{
-					googleURL,
-					yandexURL,
+				urls: map[string]*model.URL{
+					googleURL.ID: googleURL,
+					yandexURL.ID: yandexURL,
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "without duplicates",
+			u:    googleURL,
+			fields: fields{
+				urls: map[string]*model.URL{
+					yandexURL.ID: yandexURL,
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{
 				urls: tt.fields.urls,
+				test: true,
 			}
 			err := s.Create(tt.u)
+			_, ok := s.urls[tt.u.ID]
 			if tt.wantErr {
-				assert.Error(t, err, "Create() error is nil")
+				require.Error(t, err, "Create() error is nil")
 				if err != store.ErrAlreadyExists {
-					assert.NotContains(t, s.urls, tt.u)
+					assert.False(t, ok)
 				}
 			} else {
-				assert.NoError(t, err, "Create() error = %v", err)
-				assert.Contains(t, s.urls, tt.u)
+				require.NoError(t, err, "Create() error = %v", err)
+				assert.True(t, ok)
 			}
 		})
 	}
@@ -70,22 +83,22 @@ func TestStore_Create(t *testing.T) {
 
 func TestStore_GetByID(t *testing.T) {
 	type fields struct {
-		urls []model.URL
+		urls map[string]*model.URL
 	}
 	type args struct {
 		id string
 	}
-	tests := []struct {
+	var tests []struct {
 		name    string
 		fields  fields
 		args    args
 		want    model.URL
 		wantErr bool
-	}{
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			s := &Store{
 				urls: tt.fields.urls,
 			}
@@ -97,30 +110,6 @@ func TestStore_GetByID(t *testing.T) {
 				assert.NoError(t, err, "There must be error got %v", err)
 			}
 			assert.True(t, assert.ObjectsAreEqual(got, tt.want), "GetByID() got = %v, want %v", got, tt.want)
-		})
-	}
-}
-
-func TestStore_urlExists(t *testing.T) {
-	type fields struct {
-		urls []model.URL
-	}
-	type args struct {
-		url model.URL
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
-	}{}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Store{
-				urls: tt.fields.urls,
-			}
-			got := s.urlExists(tt.args.url)
-			assert.Equal(t, got, tt.want, "urlExists() = %v, want %v", got, tt.want)
 		})
 	}
 }
