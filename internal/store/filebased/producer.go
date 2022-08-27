@@ -28,7 +28,7 @@ func (p *producer) CreateURL(u *model.URL) error {
 	return p.encoder.Encode(&u)
 }
 
-func (p *producer) GetURLByID(id string) (u *model.URL, err error) {
+func (p *producer) GetURLByID(_ string) (u *model.URL, err error) {
 	// TODO: write getting url logic
 	return nil, store.ErrNotFound
 }

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/vlad-marlo/shortener/internal/store"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +23,10 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		require.NoError(t, err)
+	}(resp.Body)
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
@@ -101,7 +106,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		},
 	}
 
-	s := New(NewConfig("", "inmemory"))
+	s := New(NewConfig(store.InMemoryStorage))
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -114,7 +119,10 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 				tt.args.urlPath,
 				strings.NewReader(tt.args.urlToShort),
 			)
-			defer res.Body.Close()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				require.NoError(t, err)
+			}(res.Body)
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {
@@ -124,7 +132,10 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 
 			id := strings.TrimPrefix(string(url), "http://localhost:8080")
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
-			defer res.Body.Close()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				require.NoError(t, err)
+			}(res.Body)
 
 			require.Contains(t, res.Request.URL.String(), tt.args.urlToShort)
 		})
@@ -142,7 +153,10 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	for _, m := range unsupportedMethods {
 		t.Run(m, func(t *testing.T) {
 			res, _ := testRequest(t, ts, m, "/", nil)
-			defer res.Body.Close()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				require.NoError(t, err)
+			}(res.Body)
 			require.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
 		})
 	}
@@ -166,14 +180,18 @@ func TestServer_HandleURLGet(t *testing.T) {
 			status: http.StatusNotFound,
 		},
 	}
-	s := New(NewConfig("", "inmemory"))
+	s := New(NewConfig(store.InMemoryStorage))
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, _ := testRequest(t, ts, http.MethodGet, tt.target, nil)
-			defer res.Body.Close()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				if err != nil {
+				}
+			}(res.Body)
 			assert.Equal(t, tt.status, res.StatusCode)
 		})
 	}
@@ -254,7 +272,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		},
 	}
 
-	s := New(NewConfig("", "inmemory"))
+	s := New(NewConfig(store.InMemoryStorage))
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -271,7 +289,10 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 				tt.args.urlPath,
 				body,
 			)
-			defer res.Body.Close()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				require.NoError(t, err)
+			}(res.Body)
 			json.Unmarshal(url, &resp)
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
@@ -283,7 +304,10 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 
 			id := strings.TrimPrefix(resp.Result, "http://localhost:8080")
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
-			defer res.Body.Close()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				require.NoError(t, err)
+			}(res.Body)
 
 			require.Contains(t, res.Request.URL.String(), tt.args.request.URL)
 		})
