@@ -1,9 +1,10 @@
 package httpserver
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
-	ErrIncorrectStoreType = errors.New("incorrect storage type")
-
+	ErrIncorrectStoreType   = errors.New("incorrect storage type")
 	ErrIncorrectRequestBody = errors.New("incorrect request body")
 )
