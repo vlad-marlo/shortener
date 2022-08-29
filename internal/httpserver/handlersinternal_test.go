@@ -181,20 +181,22 @@ func TestServer_HandleURLGet(t *testing.T) {
 }
 
 func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
-	type request struct {
-		URL string `json:"url"`
-	}
-	type response struct {
-		Result string `json:"result"`
-	}
-	type args struct {
-		urlPath string
-		request request
-	}
-	type want struct {
-		wantInternalServerError bool
-		status                  int
-	}
+	type (
+		request struct {
+			URL string `json:"url"`
+		}
+		response struct {
+			Result string `json:"result"`
+		}
+		args struct {
+			urlPath string
+			request request
+		}
+		want struct {
+			wantInternalServerError bool
+			status                  int
+		}
+	)
 	tests := []struct {
 		name string
 
