@@ -23,10 +23,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
-	defer func() {
-		err := resp.Body.Close()
-		require.NoError(t, err)
-	}()
+	defer require.NoError(t, resp.Body.Close())
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
@@ -119,10 +116,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 				tt.args.urlPath,
 				strings.NewReader(tt.args.urlToShort),
 			)
-			defer func() {
-				err := res.Body.Close()
-				require.NoError(t, err)
-			}()
+			defer require.NoError(t, res.Body.Close())
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {
@@ -132,10 +126,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 
 			id := strings.TrimPrefix(string(url), "http://localhost:8080")
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
-			defer func() {
-				err := res.Body.Close()
-				require.NoError(t, err)
-			}()
+			defer require.NoError(t, res.Body.Close())
 
 			require.Contains(t, res.Request.URL.String(), tt.args.urlToShort)
 		})
@@ -153,10 +144,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	for _, m := range unsupportedMethods {
 		t.Run(m, func(t *testing.T) {
 			res, _ := testRequest(t, ts, m, "/", nil)
-			defer func() {
-				err := res.Body.Close()
-				require.NoError(t, err)
-			}()
+			defer require.NoError(t, res.Body.Close())
 			require.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
 		})
 	}
@@ -187,10 +175,7 @@ func TestServer_HandleURLGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, _ := testRequest(t, ts, http.MethodGet, tt.target, nil)
-			defer func() {
-				err := res.Body.Close()
-				require.NoError(t, err)
-			}()
+			defer require.NoError(t, res.Body.Close())
 			assert.Equal(t, tt.status, res.StatusCode)
 		})
 	}

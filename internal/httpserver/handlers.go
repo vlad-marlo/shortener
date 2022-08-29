@@ -31,12 +31,12 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	data, err := io.ReadAll(r.Body)
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func() {
+		err := r.Body.Close()
 		if err != nil {
 			log.Print(err)
 		}
-	}(r.Body)
+	}()
 
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
@@ -69,12 +69,12 @@ func (s *Server) handleURLCreateJSON() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u := &model.URL{}
 		req, err := io.ReadAll(r.Body)
-		defer func(Body io.ReadCloser) {
-			err := Body.Close()
+		defer func() {
+			err := r.Body.Close()
 			if err != nil {
 				log.Print(err)
 			}
-		}(r.Body)
+		}()
 
 		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 			return
