@@ -1,9 +1,11 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,15 +13,12 @@ import (
 )
 
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
-	if id == "" {
-		s.HandleErrorOrStatus(w, errors.New("the path argument is missing"), http.StatusBadRequest)
-		return
-	}
 
 	url, err := s.Store.GetByID(id)
 	if err != nil {
-		s.HandleErrorOrStatus(w, errors.New("where is no url with that id"), http.StatusNotFound)
+		s.handleErrorOrStatus(w, errors.New("where is no url with that id"), http.StatusNotFound)
 		return
 	}
 
@@ -32,41 +31,68 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	data, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
 
-	if s.HandleErrorOrStatus(w, err, http.StatusInternalServerError) {
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
 	if len(data) == 0 {
-		s.HandleErrorOrStatus(w, ErrIncorrectRequestBody, http.StatusBadRequest)
+		s.handleErrorOrStatus(w, ErrIncorrectRequestBody, http.StatusBadRequest)
 		return
 	}
 
 	u, err := model.NewURL(string(data))
-	if s.HandleErrorOrStatus(w, err, http.StatusBadRequest) {
+	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
-	if err = s.Store.Create(u); s.HandleErrorOrStatus(w, err, http.StatusBadRequest) {
+	if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
 	// generate full url like <base service url>/<url identificator>
 	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write([]byte(fmt.Sprintf("http://%s/%s", s.Config.BindAddr, u.ID)))
-	s.HandleErrorOrStatus(w, err, http.StatusInternalServerError)
+	_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
+	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
-func (s *Server) handleURLGetCreate(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
+func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
+	u := &model.URL{}
+	req, err := io.ReadAll(r.Body)
+	defer func() {
+		if err = r.Body.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
 
-	case http.MethodGet:
-		s.handleURLGet(w, r)
-
-	case http.MethodPost:
-		s.handleURLCreate(w, r)
-
-	default:
-		s.HandleErrorOrStatus(w, errors.New("only POST and GET are allowed"), http.StatusMethodNotAllowed)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
 	}
+	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+
+	if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+	if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+
+	resp := model.ResultResponse{
+		Result: fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
+	}
+	res, err := json.Marshal(resp)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(res)
+	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
