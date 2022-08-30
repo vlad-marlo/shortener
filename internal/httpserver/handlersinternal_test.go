@@ -9,11 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vlad-marlo/shortener/internal/store"
-
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vlad-marlo/shortener/internal/store"
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, []byte) {
@@ -102,7 +101,12 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		},
 	}
 
-	s := New(NewConfig(store.InMemoryStorage, "localhost:8080", "http://localhost:8080", "data.json"))
+	s := New(&Config{
+		BaseURL:     "http://localhost:8080",
+		BindAddr:    "localhost:8080",
+		StorageType: store.InMemoryStorage,
+	})
+
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -167,7 +171,13 @@ func TestServer_HandleURLGet(t *testing.T) {
 			status: http.StatusNotFound,
 		},
 	}
-	s := New(NewConfig(store.InMemoryStorage, "localhost:8080", "http://localhost:8080", "data.json"))
+	s := New(&Config{
+		BaseURL:     "http://localhost:8080",
+		BindAddr:    "localhost:8080",
+		FilePath:    "test.json",
+		StorageType: store.InMemoryStorage,
+	})
+
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -257,7 +267,12 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		},
 	}
 
-	s := New(NewConfig(store.InMemoryStorage, "localhost:8080", "http://localhost:8080", "data.json"))
+	s := New(&Config{
+		BaseURL:     "http://localhost:8080",
+		BindAddr:    "localhost:8080",
+		StorageType: store.InMemoryStorage,
+	})
+
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -274,10 +289,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 				tt.args.urlPath,
 				body,
 			)
-			defer func() {
-				err := res.Body.Close()
-				require.NoError(t, err)
-			}()
+			defer require.NoError(t, res.Body.Close())
 			json.Unmarshal(url, &resp)
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
@@ -289,10 +301,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 
 			id := strings.TrimPrefix(resp.Result, "http://localhost:8080")
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
-			defer func() {
-				err := res.Body.Close()
-				require.NoError(t, err)
-			}()
+			defer require.NoError(t, res.Body.Close())
 
 			require.Contains(t, res.Request.URL.String(), tt.args.request.URL)
 		})

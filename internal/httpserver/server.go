@@ -28,11 +28,8 @@ func New(config *Config) *Server {
 	s.configureRoutes()
 	log.Print("routes configured successfully")
 
-	if err := s.configureStore(); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Print("store configured successfully")
-	}
+	s.configureStore()
+	log.Print("store configured successfully")
 
 	return s
 }
@@ -41,7 +38,7 @@ func New(config *Config) *Server {
 func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
-	s.Post("/api/shorten", s.handleURLCreateJSON())
+	s.Post("/api/shorten", s.handleURLCreateJSON)
 }
 
 // configureMiddlewares ...
@@ -50,29 +47,18 @@ func (s *Server) configureMiddlewares() {
 }
 
 // configureStore ...
-func (s *Server) configureStore() error {
+func (s *Server) configureStore() {
 	switch s.Config.StorageType {
 	case store.InMemoryStorage:
 		s.Store = inmemory.New()
-
 	case store.FileBasedStorage:
 		s.Store = filebased.New(s.Config.FilePath)
-
 	default:
-		return ErrIncorrectStoreType
+		s.Store = filebased.New(s.Config.FilePath)
 	}
-	return nil
 }
 
 // ListenAndServe ...
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.Config.BindAddr, s.Router)
-}
-
-// HandleErrorOr400 return true and handle error if err is not nil
-func (s *Server) handleErrorOrStatus(w http.ResponseWriter, err error, status int) bool {
-	if err != nil {
-		http.Error(w, err.Error(), status)
-	}
-	return err != nil
 }

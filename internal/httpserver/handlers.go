@@ -32,8 +32,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 
 	data, err := io.ReadAll(r.Body)
 	defer func() {
-		err := r.Body.Close()
-		if err != nil {
+		if err := r.Body.Close(); err != nil {
 			log.Print(err)
 		}
 	}()
@@ -61,47 +60,39 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
-func (s *Server) handleURLCreateJSON() http.HandlerFunc {
-	type response struct {
-		ResultURL string `json:"result"`
+func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
+	u := &model.URL{}
+	req, err := io.ReadAll(r.Body)
+	defer func() {
+		if err = r.Body.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
+
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		u := &model.URL{}
-		req, err := io.ReadAll(r.Body)
-		defer func() {
-			err := r.Body.Close()
-			if err != nil {
-				log.Print(err)
-			}
-		}()
-
-		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
-			return
-		}
-		err = json.Unmarshal(req, u)
-		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
-			return
-		}
-
-		if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
-			return
-		}
-		if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
-			return
-		}
-
-		resp := response{
-			ResultURL: fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
-		}
-		res, err := json.Marshal(resp)
-		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-
-		w.WriteHeader(http.StatusCreated)
-		_, err = w.Write(res)
-		s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+	if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
 	}
+	if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+
+	resp := model.ResultResponse{
+		Result: fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
+	}
+	res, err := json.Marshal(resp)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(res)
+	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }

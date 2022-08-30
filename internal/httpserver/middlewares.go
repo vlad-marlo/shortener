@@ -37,10 +37,12 @@ func (s *Server) gzipCompression(next http.Handler) http.Handler {
 			}
 			r.Body = reader
 		}
+
 		if !strings.Contains(r.Header.Get("accept-encoding"), "gzip") {
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
 			next.ServeHTTP(w, r)
@@ -51,6 +53,7 @@ func (s *Server) gzipCompression(next http.Handler) http.Handler {
 				log.Print(err)
 			}
 		}()
+
 		w.Header().Set("content-encoding", "gzip")
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
