@@ -14,9 +14,6 @@ type Config struct {
 	StorageType string
 }
 
-func init() {
-}
-
 // NewConfig return pointer to config with params. Empty params will be set by default
 func NewConfig() *Config {
 	c := &Config{}
