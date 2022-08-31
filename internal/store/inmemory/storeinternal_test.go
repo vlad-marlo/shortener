@@ -63,8 +63,8 @@ func TestStore_Create(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{
-				urls: tt.fields.urls,
-				test: true,
+				urls:            tt.fields.urls,
+				useMutexLocking: false,
 			}
 			err := s.Create(tt.u)
 			_, ok := s.urls[tt.u.ID]
@@ -111,7 +111,8 @@ func TestStore_GetByID(t *testing.T) {
 			t.Parallel()
 
 			s := &Store{
-				urls: tt.fields.urls,
+				urls:            tt.fields.urls,
+				useMutexLocking: false,
 			}
 			got, err := s.GetByID(tt.args.id)
 			if tt.wantErr {

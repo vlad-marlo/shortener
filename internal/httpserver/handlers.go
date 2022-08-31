@@ -61,7 +61,6 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
-	u := &model.URL{}
 	req, err := io.ReadAll(r.Body)
 	defer func() {
 		if err = r.Body.Close(); err != nil {
@@ -72,6 +71,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
+	u := &model.URL{}
 	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}

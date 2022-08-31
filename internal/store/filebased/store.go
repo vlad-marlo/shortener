@@ -12,7 +12,11 @@ type Store struct {
 	Filename string
 }
 
-func New(filename string) store.Store {
+func New(filename string) (store.Store, error) {
+	if filename == "" {
+		return inmemory.New(), nil
+	}
+
 	s := &Store{
 		Filename: filename,
 	}
@@ -23,11 +27,10 @@ func New(filename string) store.Store {
 		}
 	}()
 	if err != nil {
-		log.Print(err)
-		return inmemory.New()
+		return nil, err
 	}
 	log.Print("successfully configured file-based store")
-	return s
+	return s, nil
 }
 
 func (s *Store) GetByID(id string) (u *model.URL, err error) {

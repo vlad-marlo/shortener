@@ -10,7 +10,7 @@ import (
 type Config struct {
 	BindAddr    string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	FilePath    string `env:"FILE_STORAGE_PATH" envDefault:"data.json"`
+	FilePath    string `env:"FILE_STORAGE_PATH"`
 	StorageType string
 }
 
