@@ -47,15 +47,16 @@ func (s *Server) configureMiddlewares() {
 }
 
 // configureStore ...
-func (s *Server) configureStore() {
+func (s *Server) configureStore() (err error) {
 	switch s.Config.StorageType {
 	case store.InMemoryStorage:
-		s.Store = inmemory.New()
+		s.Store, err = inmemory.New(), nil
 	case store.FileBasedStorage:
-		s.Store = filebased.New(s.Config.FilePath)
+		s.Store, err = filebased.New(s.Config.FilePath)
 	default:
-		s.Store = filebased.New(s.Config.FilePath)
+		s.Store, err = filebased.New(s.Config.FilePath)
 	}
+	return
 }
 
 // ListenAndServe ...

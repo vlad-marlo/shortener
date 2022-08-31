@@ -11,22 +11,22 @@ import (
 type Store struct {
 	mu sync.Mutex
 
-	urls map[string]*model.URL
-	test bool
+	urls            map[string]*model.URL
+	useMutexLocking bool
 }
 
 // New ...
 func New() *Store {
 	log.Print("successfully configured inmemory storage")
 	return &Store{
-		urls: make(map[string]*model.URL),
-		test: false,
+		urls:            make(map[string]*model.URL),
+		useMutexLocking: true,
 	}
 }
 
 // GetByID returns URL object and error by URL ID
 func (s *Store) GetByID(id string) (u *model.URL, err error) {
-	if !s.test {
+	if s.useMutexLocking {
 		defer s.mu.Unlock()
 		s.mu.Lock()
 	}
@@ -41,7 +41,7 @@ func (s *Store) GetByID(id string) (u *model.URL, err error) {
 
 // Create URL model to storage
 func (s *Store) Create(u *model.URL) (err error) {
-	if !s.test {
+	if s.useMutexLocking {
 		defer s.mu.Unlock()
 		s.mu.Lock()
 	}
