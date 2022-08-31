@@ -39,17 +39,6 @@ func TestStore_Create(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "with duplicates",
-			u:    googleURL,
-			fields: fields{
-				urls: map[string]*model.URL{
-					googleURL.ID: googleURL,
-					yandexURL.ID: yandexURL,
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "without duplicates",
 			u:    googleURL,
 			fields: fields{
