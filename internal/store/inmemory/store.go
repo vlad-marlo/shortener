@@ -49,9 +49,8 @@ func (s *Store) Create(u *model.URL) (err error) {
 	if err = u.Validate(); err != nil {
 		return
 	}
-	if _, ok := s.urls[u.ID]; ok {
-		err = store.ErrAlreadyExists
-		return
+	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
+		u.ShortURL()
 	}
 	s.urls[u.ID] = u
 	return

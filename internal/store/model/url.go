@@ -1,6 +1,8 @@
 package model
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"strings"
 
@@ -42,6 +44,11 @@ func (u *URL) Validate() error {
 
 // ShortURL ...
 func (u *URL) ShortURL() error {
-	u.ID = uuid.New().String()
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	if err != nil {
+		return err
+	}
+	u.ID = base64.StdEncoding.EncodeToString(b)
 	return u.Validate()
 }
