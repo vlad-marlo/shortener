@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
@@ -16,34 +17,20 @@ type Server struct {
 	Config *Config
 }
 
-// New ...
+// New return new configured server with params from config object
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
 		Router: chi.NewRouter(),
 	}
 
+	s.configureMiddlewares()
 	s.configureRoutes()
-	log.Print("routes configured succesfully")
+	log.Print("routes configured successfully")
 
-	if err := s.configureStore(); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Print("store configured succesfully")
-	}
+	s.configureStore()
+	log.Print("store configured successfully")
 
-	return s
-}
-
-// NewTestServer ...
-func NewTestServer(config *Config) *Server {
-	s := &Server{
-		Config: config,
-		Router: chi.NewMux(),
-	}
-	if err := s.configureStore(); err != nil {
-		log.Fatal(err)
-	}
 	return s
 }
 
@@ -51,29 +38,28 @@ func NewTestServer(config *Config) *Server {
 func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
+	s.Post("/api/shorten", s.handleURLCreateJSON)
+}
+
+// configureMiddlewares ...
+func (s *Server) configureMiddlewares() {
+	s.Use(s.gzipCompression)
 }
 
 // configureStore ...
-func (s *Server) configureStore() error {
+func (s *Server) configureStore() (err error) {
 	switch s.Config.StorageType {
-	case "inmemory":
-		s.Store = inmemory.New()
-
+	case store.InMemoryStorage:
+		s.Store, err = inmemory.New(), nil
+	case store.FileBasedStorage:
+		s.Store, err = filebased.New(s.Config.FilePath)
 	default:
-		return ErrIncorrectStoreType
+		s.Store, err = filebased.New(s.Config.FilePath)
 	}
-	return nil
+	return
 }
 
 // ListenAndServe ...
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.Config.BindAddr, s.Router)
-}
-
-// HandleErrorOr400 return true and handle error if err is not nil
-func (s *Server) HandleErrorOrStatus(w http.ResponseWriter, err error, status int) bool {
-	if err != nil {
-		http.Error(w, err.Error(), status)
-	}
-	return err != nil
 }

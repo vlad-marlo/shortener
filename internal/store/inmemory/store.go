@@ -1,46 +1,57 @@
 package inmemory
 
 import (
+	"log"
+	"sync"
+
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 type Store struct {
-	urls []model.URL
+	mu sync.Mutex
+
+	urls            map[string]*model.URL
+	useMutexLocking bool
 }
 
+// New ...
 func New() *Store {
-	return &Store{}
+	log.Print("successfully configured inmemory storage")
+	return &Store{
+		urls:            make(map[string]*model.URL),
+		useMutexLocking: true,
+	}
 }
 
-// GetByID Returns BaseURL or URL object by ID
-func (s *Store) GetByID(id string) (model.URL, error) {
-	for _, u := range s.urls {
-		if u.ID == id {
-			return u, nil
-		}
+// GetByID returns URL object and error by URL ID
+func (s *Store) GetByID(id string) (u *model.URL, err error) {
+	if s.useMutexLocking {
+		defer s.mu.Unlock()
+		s.mu.Lock()
 	}
-	return model.URL{}, store.ErrNotFound
+
+	err = nil
+	u, ok := s.urls[id]
+	if !ok {
+		err = store.ErrAlreadyExists
+	}
+	return
 }
 
-// Supporting func to check existing url in storage or not
-func (s *Store) urlExists(url model.URL) bool {
-	for _, u := range s.urls {
-		if u.ID == url.ID || u.BaseURL == url.BaseURL {
-			return true
-		}
+// Create URL model to storage
+func (s *Store) Create(u *model.URL) (err error) {
+	if s.useMutexLocking {
+		defer s.mu.Unlock()
+		s.mu.Lock()
 	}
-	return false
-}
 
-// Create Url model to storage
-func (s *Store) Create(u model.URL) error {
-	if err := u.Validate(); err != nil {
-		return err
+	if err = u.Validate(); err != nil {
+		return
 	}
-	if s.urlExists(u) {
-		return store.ErrAlreadyExists
+	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
+		u.ShortURL()
 	}
-	s.urls = append(s.urls, u)
-	return nil
+	s.urls[u.ID] = u
+	return
 }
