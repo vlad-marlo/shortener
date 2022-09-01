@@ -59,3 +59,16 @@ func (s *Store) Create(u *model.URL) error {
 	}
 	return p.CreateURL(u)
 }
+
+func (s *Store) GetAllUserURLs(user string) ([]*model.URL, error) {
+	p, err := newProducer(s.Filename)
+	defer func() {
+		if err = p.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+	return p.GetAllUserURLs(user)
+}

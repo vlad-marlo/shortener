@@ -45,7 +45,11 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := model.NewURL(string(data))
+	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+
+	u, err := model.NewURL(string(data), "default")
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}

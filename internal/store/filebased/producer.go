@@ -33,7 +33,7 @@ func (p *producer) CreateURL(u *model.URL) error {
 
 func (p *producer) GetURLByID(id string) (u *model.URL, err error) {
 	for {
-		err := p.decoder.Decode(&u)
+		err = p.decoder.Decode(&u)
 		if u != nil && u.ID == id {
 			return u, nil
 		}
@@ -42,6 +42,25 @@ func (p *producer) GetURLByID(id string) (u *model.URL, err error) {
 				return nil, store.ErrNotFound
 			}
 			return nil, err
+		}
+	}
+}
+
+func (p *producer) GetAllUserURLs(user string) (urls []*model.URL, err error) {
+	var u *model.URL
+	for {
+		err = p.decoder.Decode(&u)
+		if u != nil && u.User == user {
+			urls = append(urls, u)
+		}
+		if err != nil {
+			if len(urls) == 0 {
+				return nil, store.ErrNotFound
+			}
+			if err == io.EOF {
+				return urls, nil
+			}
+			return
 		}
 	}
 }

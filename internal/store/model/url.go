@@ -15,15 +15,16 @@ var (
 type URL struct {
 	ID      string `json:"result,omitempty"`
 	BaseURL string `json:"url"`
+	User    string `json:"user,omitempty"`
 }
 
 // NewURL ...
-func NewURL(url string) (*URL, error) {
+func NewURL(url string, user string) (*URL, error) {
 	u := &URL{
 		BaseURL: url,
+		User:    user,
 	}
-	u.ShortURL()
-	if err := u.Validate(); err != nil {
+	if err := u.ShortURL(); err != nil {
 		return nil, err
 	}
 	return u, nil
