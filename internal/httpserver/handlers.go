@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
@@ -99,4 +100,28 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(res)
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+}
+
+func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
+	userCookie, err := r.Cookie(middleware.UserIDCookieName)
+	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+	urls, err := s.Store.GetAllUserURLs(userCookie.Value)
+
+	responseURLs := make([]*model.AllUserURLsResponse, len(urls))
+	for _, u := range urls {
+		resp := &model.AllUserURLsResponse{
+			ShortURL:    fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
+			OriginalURL: u.BaseURL,
+		}
+		responseURLs = append(responseURLs, resp)
+	}
+
+	response, err := json.Marshal(responseURLs)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+	w.Write(response)
+
 }
