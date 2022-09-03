@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
@@ -43,7 +44,7 @@ func (s *Server) configureRoutes() {
 
 // configureMiddlewares ...
 func (s *Server) configureMiddlewares() {
-	s.Use(s.gzipCompression)
+	s.Use(middleware.GzipCompression)
 }
 
 // configureStore ...
