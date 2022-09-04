@@ -67,9 +67,6 @@ func (s *Store) GetAllUserURLs(user string) (urls []*model.URL, err error) {
 			urls = append(urls, u)
 		}
 	}
-	if len(urls) == 0 {
-		return nil, store.ErrNotFound
-	}
 
 	return
 }

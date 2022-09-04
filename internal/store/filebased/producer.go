@@ -54,9 +54,6 @@ func (p *producer) GetAllUserURLs(user string) (urls []*model.URL, err error) {
 			urls = append(urls, u)
 		}
 		if err != nil {
-			if len(urls) == 0 {
-				return nil, store.ErrNotFound
-			}
 			if err == io.EOF {
 				return urls, nil
 			}

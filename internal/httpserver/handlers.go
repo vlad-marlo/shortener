@@ -51,7 +51,14 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := r.Context().Value(middleware.UserCTXName)
-	u, err := model.NewURL(string(data), user.(string))
+	var userID string
+	if user == nil {
+		userID = middleware.UserIDDefaultValue
+	} else {
+		userID = user.(string)
+	}
+
+	u, err := model.NewURL(string(data), userID)
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
@@ -73,12 +80,19 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 		}
 	}()
-
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
+
+	var userID string
+	if user := r.Context().Value(middleware.UserCTXName); user != nil {
+		userID = user.(string)
+	} else {
+		userID = middleware.UserIDDefaultValue
+	}
+
 	u := &model.URL{
-		User: r.Context().Value(middleware.UserCTXName).(string),
+		User: userID,
 	}
 	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
@@ -106,9 +120,20 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
-	urls, err := s.Store.GetAllUserURLs(r.Context().Value(middleware.UserCTXName).(string))
+	var userID string
+	if user := r.Context().Value(middleware.UserCTXName); user != nil {
+		userID = user.(string)
+	} else {
+		userID = middleware.UserIDDefaultValue
+	}
 
-	responseURLs := make([]*model.AllUserURLsResponse, len(urls))
+	urls, err := s.Store.GetAllUserURLs(userID)
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	responseURLs := []*model.AllUserURLsResponse{}
 	for _, u := range urls {
 		resp := &model.AllUserURLsResponse{
 			ShortURL:    fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
@@ -121,6 +146,9 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
-	w.Write(response)
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(response)
+	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }

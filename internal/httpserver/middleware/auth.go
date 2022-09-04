@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -17,8 +18,9 @@ type Encryptor struct {
 }
 
 const (
-	UserIDCookieName = "user"
-	UserCTXName      = "user_in_context"
+	UserIDCookieName   = "user"
+	UserCTXName        = "user_in_context"
+	UserIDDefaultValue = "default_user"
 )
 
 var encryptor *Encryptor
@@ -58,8 +60,10 @@ func NewEncryptor() error {
 		return err
 	}
 
-	encryptor.nonce = nonce
-	encryptor.GCM = aesGCM
+	encryptor = &Encryptor{
+		nonce: nonce,
+		GCM:   aesGCM,
+	}
 
 	return nil
 }
@@ -93,14 +97,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
 
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
 
@@ -110,7 +114,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			Value: encoded,
 			Path:  "/",
 		}
-		r.AddCookie(c)
+		http.SetCookie(w, c)
+		log.Print(rawUserID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, rawUserID)))
 	})
 }
