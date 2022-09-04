@@ -55,7 +55,7 @@ func TestStore_Create(t *testing.T) {
 				urls:            tt.fields.urls,
 				useMutexLocking: false,
 			}
-			err := s.Create(tt.u)
+			err := s.Create(nil, tt.u)
 			_, ok := s.urls[tt.u.ID]
 			if tt.wantErr {
 				require.Error(t, err, "Create() error is nil")
@@ -103,7 +103,7 @@ func TestStore_GetByID(t *testing.T) {
 				urls:            tt.fields.urls,
 				useMutexLocking: false,
 			}
-			got, err := s.GetByID(tt.args.id)
+			got, err := s.GetByID(nil, tt.args.id)
 			if tt.wantErr {
 				assert.Error(t, err, "GetByID() error = %v, wantErr %v", err, tt.wantErr)
 				return

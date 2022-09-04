@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -60,9 +61,9 @@ func (s *Server) configureStore() (err error) {
 	case store.FileBasedStorage:
 		s.Store, err = filebased.New(s.Config.FilePath)
 	case store.SQLStore:
-		s.Store, err = sqlstore.New(s.Config.Database)
+		s.Store, err = sqlstore.New(context.Background(), s.Config.Database)
 	default:
-		s.Store, err = sqlstore.New(s.Config.FilePath)
+		s.Store, err = filebased.New(s.Config.FilePath)
 	}
 	return
 }

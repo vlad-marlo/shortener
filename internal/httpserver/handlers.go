@@ -1,12 +1,14 @@
 package httpserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
@@ -17,7 +19,11 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
 
-	url, err := s.Store.GetByID(id)
+	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	url, err := s.Store.GetByID(ctx, id)
+	<-ctx.Done()
 	if err != nil {
 		s.handleErrorOrStatus(w, errors.New("where is no url with that id"), http.StatusNotFound)
 		return
@@ -63,7 +69,10 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	if err = s.Store.Create(ctx, u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
@@ -101,7 +110,11 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	if err = u.ShortURL(); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
-	if err = s.Store.Create(u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	if err = s.Store.Create(ctx, u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
@@ -127,7 +140,10 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 		userID = middleware.UserIDDefaultValue
 	}
 
-	urls, err := s.Store.GetAllUserURLs(userID)
+	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	urls, err := s.Store.GetAllUserURLs(ctx, userID)
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
@@ -157,7 +173,10 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
-	if err := s.Store.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	if err := s.Store.Ping(ctx); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

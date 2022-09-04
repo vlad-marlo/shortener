@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"context"
 	"log"
 	"sync"
 
@@ -25,7 +26,7 @@ func New() *Store {
 }
 
 // GetByID returns URL object and error by URL ID
-func (s *Store) GetByID(id string) (u *model.URL, err error) {
+func (s *Store) GetByID(_ context.Context, id string) (u *model.URL, err error) {
 	if s.useMutexLocking {
 		defer s.mu.Unlock()
 		s.mu.Lock()
@@ -40,7 +41,7 @@ func (s *Store) GetByID(id string) (u *model.URL, err error) {
 }
 
 // Create URL model to storage
-func (s *Store) Create(u *model.URL) (err error) {
+func (s *Store) Create(_ context.Context, u *model.URL) (err error) {
 	if s.useMutexLocking {
 		defer s.mu.Unlock()
 		s.mu.Lock()
@@ -56,7 +57,7 @@ func (s *Store) Create(u *model.URL) (err error) {
 	return
 }
 
-func (s *Store) GetAllUserURLs(user string) (urls []*model.URL, err error) {
+func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.URL, err error) {
 	if s.useMutexLocking {
 		defer s.mu.Unlock()
 		s.mu.Lock()
@@ -71,6 +72,6 @@ func (s *Store) GetAllUserURLs(user string) (urls []*model.URL, err error) {
 	return
 }
 
-func (s *Store) Ping() error {
+func (s *Store) Ping(_ context.Context) error {
 	return nil
 }

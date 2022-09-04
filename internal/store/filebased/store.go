@@ -1,6 +1,7 @@
 package filebased
 
 import (
+	"context"
 	"errors"
 	"log"
 
@@ -33,7 +34,7 @@ func New(filename string) (store.Store, error) {
 	return s, nil
 }
 
-func (s *Store) GetByID(id string) (*model.URL, error) {
+func (s *Store) GetByID(_ context.Context, id string) (*model.URL, error) {
 	p, err := newProducer(s.Filename)
 	defer func() {
 		if err = p.Close(); err != nil {
@@ -46,7 +47,7 @@ func (s *Store) GetByID(id string) (*model.URL, error) {
 	return p.GetURLByID(id)
 }
 
-func (s *Store) Create(u *model.URL) error {
+func (s *Store) Create(_ context.Context, u *model.URL) error {
 	p, err := newProducer(s.Filename)
 	defer func() {
 		if err = p.Close(); err != nil {
@@ -59,7 +60,7 @@ func (s *Store) Create(u *model.URL) error {
 	return p.CreateURL(u)
 }
 
-func (s *Store) GetAllUserURLs(user string) ([]*model.URL, error) {
+func (s *Store) GetAllUserURLs(_ context.Context, user string) ([]*model.URL, error) {
 	p, err := newProducer(s.Filename)
 	defer func() {
 		if err = p.Close(); err != nil {
@@ -72,6 +73,6 @@ func (s *Store) GetAllUserURLs(user string) ([]*model.URL, error) {
 	return p.GetAllUserURLs(user)
 }
 
-func (s *Store) Ping() error {
+func (s *Store) Ping(_ context.Context) error {
 	return nil
 }
