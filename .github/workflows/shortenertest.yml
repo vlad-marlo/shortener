@@ -3,10 +3,6 @@ name: autotests
 on:
   pull_request:
   push:
-    branches:
-      - main
-      - dev
-      - increment_9
 
 jobs:
 
