@@ -119,6 +119,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 		http.SetCookie(w, c)
 		log.Print(rawUserID)
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, rawUserID)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, cookieUserIDValueType(rawUserID))))
 	})
 }
