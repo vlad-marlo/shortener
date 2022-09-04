@@ -6,13 +6,15 @@ import (
 
 	"github.com/jackc/pgx/v4"
 
+	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 type SQLStore struct {
-	db *pgx.Conn
+	dbURL string
 }
 
+// New ...
 func New(ctx context.Context, connectString string) (*SQLStore, error) {
 	db, err := pgx.Connect(ctx, connectString)
 	defer db.Close(ctx)
@@ -20,7 +22,7 @@ func New(ctx context.Context, connectString string) (*SQLStore, error) {
 		return nil, err
 	}
 
-	store := &SQLStore{db: db}
+	store := &SQLStore{dbURL: connectString}
 
 	if err := store.migrate(ctx); err != nil {
 		log.Print(err)
@@ -31,32 +33,114 @@ func New(ctx context.Context, connectString string) (*SQLStore, error) {
 	return store, nil
 }
 
+// migrate ...
 func (s *SQLStore) migrate(ctx context.Context) error {
-	_, err := s.db.Exec(
+	db, err := pgx.Connect(ctx, s.dbURL)
+	defer db.Close(ctx)
+
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(
 		ctx,
 		`CREATE TABLE IF NOT EXISTS urls(
 			id SERIAL PRIMARY KEY NOT NULL,
-			short CHAR(255) UNIQUE,
-			original_url CHAR(512),
-			created_by CHAR(255)
+			short VARCHAR UNIQUE,
+			original_url VARCHAR,
+			created_by VARCHAR
 		);`,
 	)
 	return err
 }
 
+// closeDB ...
+func (s *SQLStore) closeDB(ctx context.Context, conn *pgx.Conn) {
+	if err := conn.Close(ctx); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// Create ...
 func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
+	db, err := pgx.Connect(ctx, s.dbURL)
+	defer s.closeDB(ctx, db)
 
-	return nil
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(
+		ctx,
+		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
+		u.ID,
+		u.BaseURL,
+		u.User,
+	)
+	return err
 }
 
+// GetByID ...
 func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
-	return nil, nil
+	db, err := pgx.Connect(ctx, s.dbURL)
+	defer s.closeDB(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+
+	u := &model.URL{}
+	if err := db.QueryRow(
+		ctx,
+		`SELECT short, original_url, created_by FROM urls WHERE short=$1`,
+		id,
+	).Scan(
+		&u.ID,
+		&u.BaseURL,
+		&u.User,
+	); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, store.ErrNotFound
+		}
+		return nil, err
+	}
+	return u, nil
 }
 
+// GetAllUserURLs ...
 func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.URL, error) {
-	return nil, nil
+	db, err := pgx.Connect(ctx, s.dbURL)
+	defer s.closeDB(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+
+	urls := []*model.URL{}
+
+	r, err := db.Query(
+		ctx,
+		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1`,
+		userID,
+	)
+	defer r.Close()
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return urls, nil
+		}
+		return nil, err
+	}
+
+	for r.Next() {
+		u := new(model.URL)
+		if err := r.Scan(&u.ID, &u.BaseURL, &u.User); err != nil {
+			return nil, err
+		}
+		urls = append(urls, u)
+	}
+
+	return urls, nil
 }
 
+// Ping ...
 func (s *SQLStore) Ping(ctx context.Context) error {
-	return s.db.Ping(ctx)
+	db, _ := pgx.Connect(ctx, s.dbURL)
+	defer s.closeDB(ctx, db)
+	return db.Ping(ctx)
 }
