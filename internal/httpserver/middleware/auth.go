@@ -17,14 +17,13 @@ type (
 		nonce []byte
 		GCM   cipher.AEAD
 	}
-	cookieNameType        string
 	cookieUserIDValueType string
 )
 
 const (
-	UserIDCookieName   cookieNameType        = "user"
-	UserCTXName        cookieNameType        = "user_in_context"
-	UserIDDefaultValue cookieUserIDValueType = "default_user"
+	UserIDCookieName   = "user"
+	UserCTXName        = "user_in_context"
+	UserIDDefaultValue = "default_user"
 )
 
 var encryptor *Encryptor
@@ -101,14 +100,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
+			next.ServeHTTP(w, r)
 			return
 		}
 
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
+			next.ServeHTTP(w, r)
 			return
 		}
 
