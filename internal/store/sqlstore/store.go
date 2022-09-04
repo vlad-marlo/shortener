@@ -1,19 +1,20 @@
 package sqlstore
 
 import (
-	"database/sql"
+	"context"
 
+	"github.com/jackc/pgx/v4"
 	_ "github.com/jackc/pgx/v4"
 
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 type SQLStore struct {
-	db *sql.DB
+	db *pgx.Conn
 }
 
 func New(connectString string) (*SQLStore, error) {
-	db, err := sql.Open("postgres", connectString)
+	db, err := pgx.Connect(context.Background(), connectString)
 	if err != nil {
 		return nil, err
 	}
