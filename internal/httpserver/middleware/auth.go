@@ -21,9 +21,9 @@ type (
 )
 
 const (
-	UserIDCookieName   = "user"
-	UserCTXName        = "user_in_context"
-	UserIDDefaultValue = "default_user"
+	UserIDCookieName                         = "user"
+	UserCTXName        cookieUserIDValueType = "user_in_context"
+	UserIDDefaultValue                       = "default_user"
 )
 
 var encryptor *Encryptor
@@ -100,14 +100,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
 
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
 
@@ -119,6 +119,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 		http.SetCookie(w, c)
 		log.Print(rawUserID)
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), cookieUserIDValueType(UserCTXName), rawUserID)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, rawUserID)))
 	})
 }
