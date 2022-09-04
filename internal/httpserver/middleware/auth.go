@@ -9,10 +9,6 @@ import (
 
 const UserIDCookieName = "user"
 
-func encryptUUID(uuid string) (string, error) {
-	return "", nil
-}
-
 // AuthMiddleware ...
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -28,5 +24,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			}
 			r.AddCookie(c)
 		}
+		next.ServeHTTP(w, r)
 	})
 }
