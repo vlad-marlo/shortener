@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+      - dev
+      - increment_9
 
 jobs:
 
@@ -117,49 +119,49 @@ jobs:
               -source-path=. \
               -binary-path=cmd/shortener/shortener
 
-      - name: "Code increment #10"
-        if: always()
-        run: |
-          shortenertest -test.v -test.run=^TestIteration10$ \
-              -source-path=. \
-              -binary-path=cmd/shortener/shortener \
-              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
-
-      - name: "Code increment #11"
-        if: always()
-        run: |
-          shortenertest -test.v -test.run=^TestIteration11$ \
-              -binary-path=cmd/shortener/shortener \
-              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
-
-      - name: "Code increment #12"
-        if: always()
-        run: |
-          shortenertest -test.v -test.run=^TestIteration12$ \
-              -binary-path=cmd/shortener/shortener \
-              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
-
-      - name: "Code increment #13"
-        if: always()
-        run: |
-          shortenertest -test.v -test.run=^TestIteration13$ \
-              -binary-path=cmd/shortener/shortener \
-              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
-
-      - name: "Code increment #14"
-        if: always()
-        run: |
-          shortenertest -test.v -test.run=^TestIteration14$ \
-              -binary-path=cmd/shortener/shortener \
-              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
-
-      - name: "Code increment #14 (degradation)"
-        if: always()
-        run: |
-          shortenertest -test.v -test.run=^TestIteration14$ \
-              -binary-path=cmd/shortener/shortener
-
-      - name: "Code increment #14 (race detection)"
-        if: always()
-        run: |
-          go test -v -race ./...
+      # - name: "Code increment #10"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration10$ \
+      #         -source-path=. \
+      #         -binary-path=cmd/shortener/shortener \
+      #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+      #
+      # - name: "Code increment #11"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration11$ \
+      #         -binary-path=cmd/shortener/shortener \
+      #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+      #
+      # - name: "Code increment #12"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration12$ \
+      #         -binary-path=cmd/shortener/shortener \
+      #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+      #
+      # - name: "Code increment #13"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration13$ \
+      #         -binary-path=cmd/shortener/shortener \
+      #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+      #
+      # - name: "Code increment #14"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration14$ \
+      #         -binary-path=cmd/shortener/shortener \
+      #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+      #
+      # - name: "Code increment #14 (degradation)"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration14$ \
+      #         -binary-path=cmd/shortener/shortener
+      #
+      # - name: "Code increment #14 (race detection)"
+      #   if: always()
+      #   run: |
+      #     go test -v -race ./...
