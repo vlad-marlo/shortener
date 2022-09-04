@@ -50,7 +50,8 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := model.NewURL(string(data), "default")
+	user := r.Context().Value(middleware.UserCTXName)
+	u, err := model.NewURL(string(data), user.(string))
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
@@ -76,7 +77,9 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
-	u := &model.URL{}
+	u := &model.URL{
+		User: r.Context().Value(middleware.UserCTXName).(string),
+	}
 	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
@@ -103,11 +106,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
-	userCookie, err := r.Cookie(middleware.UserIDCookieName)
-	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
-		return
-	}
-	urls, err := s.Store.GetAllUserURLs(userCookie.Value)
+	urls, err := s.Store.GetAllUserURLs(r.Context().Value(middleware.UserCTXName).(string))
 
 	responseURLs := make([]*model.AllUserURLsResponse, len(urls))
 	for _, u := range urls {

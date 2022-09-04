@@ -1,29 +1,116 @@
 package middleware
 
 import (
-	"log"
+	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 
 	"github.com/google/uuid"
 )
 
-const UserIDCookieName = "user"
+type Encryptor struct {
+	nonce []byte
+	GCM   cipher.AEAD
+}
+
+const (
+	UserIDCookieName = "user"
+	UserCTXName      = "user_in_context"
+)
+
+var encryptor *Encryptor
+
+// generateRandom byte slice
+func generateRandom(size int) ([]byte, error) {
+	b := make([]byte, size)
+	if _, err := rand.Read(b); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// NewEncryptor ...
+func NewEncryptor() error {
+	if encryptor != nil {
+		return nil
+	}
+
+	key, err := generateRandom(aes.BlockSize)
+	if err != nil {
+		return err
+	}
+
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return err
+	}
+
+	aesGCM, err := cipher.NewGCM(aesBlock)
+	if err != nil {
+		return err
+	}
+
+	nonce, err := generateRandom(aesGCM.NonceSize())
+	if err != nil {
+		return err
+	}
+
+	encryptor.nonce = nonce
+	encryptor.GCM = aesGCM
+
+	return nil
+}
+
+// EncodeUUID ...
+func (e *Encryptor) EncodeUUID(uuid string) string {
+	src := []byte(uuid)
+	dst := e.GCM.Seal(nil, e.nonce, src, nil)
+	return hex.EncodeToString(dst)
+}
+
+// DecodeUUID ...
+func (e *Encryptor) DecodeUUID(uuid string, to *string) error {
+	dst, err := hex.DecodeString(uuid)
+	if err != nil {
+		return err
+	}
+
+	src, err := e.GCM.Open(nil, e.nonce, dst, nil)
+	if err != nil {
+		return err
+	}
+
+	*to = string(src)
+	return nil
+}
 
 // AuthMiddleware ...
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if user, err := r.Cookie(UserIDCookieName); err == nil {
-			log.Print(user.Value)
-		} else if err == http.ErrNoCookie {
-			id := uuid.New().String()
-			c := &http.Cookie{
-				Name:  UserIDCookieName,
-				Value: id,
+		var rawUserID string
 
-				Path: "/",
-			}
-			r.AddCookie(c)
+		if err := NewEncryptor(); err != nil {
+			next.ServeHTTP(w, r)
+			return
 		}
-		next.ServeHTTP(w, r)
+
+		if user, err := r.Cookie(UserIDCookieName); err != nil {
+			rawUserID = uuid.New().String()
+		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		encoded := encryptor.EncodeUUID(rawUserID)
+		c := &http.Cookie{
+			Name:  UserIDCookieName,
+			Value: encoded,
+			Path:  "/",
+		}
+		r.AddCookie(c)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, rawUserID)))
 	})
 }
