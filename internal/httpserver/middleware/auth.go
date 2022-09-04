@@ -12,15 +12,19 @@ import (
 	"github.com/google/uuid"
 )
 
-type Encryptor struct {
-	nonce []byte
-	GCM   cipher.AEAD
-}
+type (
+	Encryptor struct {
+		nonce []byte
+		GCM   cipher.AEAD
+	}
+	cookieNameType        string
+	cookieUserIDValueType string
+)
 
 const (
-	UserIDCookieName   = "user"
-	UserCTXName        = "user_in_context"
-	UserIDDefaultValue = "default_user"
+	UserIDCookieName   cookieNameType        = "user"
+	UserCTXName        cookieNameType        = "user_in_context"
+	UserIDDefaultValue cookieUserIDValueType = "default_user"
 )
 
 var encryptor *Encryptor

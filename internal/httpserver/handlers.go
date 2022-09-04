@@ -128,6 +128,9 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	urls, err := s.Store.GetAllUserURLs(userID)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
 	if len(urls) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
