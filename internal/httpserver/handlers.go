@@ -205,22 +205,25 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, v := range data {
+		u, err := model.NewURL(v.OriginalURL, userID, v.CorrelationID)
+		if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+			return
+		}
 		urls = append(
 			urls,
-			&model.URL{
-				ID:      v.CorrelationID,
-				BaseURL: v.OriginalURL,
-				User:    userID,
-			},
+			u,
 		)
 	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
 	resp, err := s.Store.URLsBulkCreate(ctx, urls)
-	for i, _ := range resp {
-		id := resp[i].ShortURL
-		resp[i].ShortURL = fmt.Sprintf(s.Config.BaseURL, id)
+	for _, v := range resp {
+		id := v.ShortURL
+		v.ShortURL = fmt.Sprintf(s.Config.BaseURL, id)
 	}
+
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}

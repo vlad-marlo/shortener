@@ -8,21 +8,27 @@ import (
 )
 
 var (
-	ErrURLContainSpace = errors.New("url must have no spaces in it")
-	ErrURLTooShort     = errors.New("url must be 4 or more chars long")
+	ErrURLContainSpace                = errors.New("url must have no spaces in it")
+	ErrURLTooShort                    = errors.New("url must be 4 or more chars long")
+	ErrURLWithUnsupporterCorelationID = errors.New("corelationID must be one")
 )
 
 type URL struct {
-	ID      string `json:"result,omitempty"`
 	BaseURL string `json:"url"`
 	User    string `json:"user,omitempty"`
+	CorelID int64  `json:"-"`
+	ID      string `json:"result,omitempty"`
 }
 
 // NewURL ...
-func NewURL(url string, user string) (*URL, error) {
+func NewURL(url, user string, corelationID ...int64) (*URL, error) {
 	u := &URL{
 		BaseURL: url,
 		User:    user,
+		CorelID: corelationID[0],
+	}
+	if len(corelationID) != 1 {
+		return nil, ErrURLWithUnsupporterCorelationID
 	}
 	if err := u.ShortURL(); err != nil {
 		return nil, err

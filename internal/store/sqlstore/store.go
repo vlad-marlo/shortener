@@ -172,14 +172,13 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
 	)
 	for _, v := range urls {
-		result, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
+		_, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				log.Fatalf("update drivers: unable to rollback: %v", err)
 			}
 			return nil, err
 		}
-		corellation, err := result.LastInsertId()
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				log.Fatalf("update drivers: unable to rollback: %v", err)
@@ -190,7 +189,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 			response,
 			&model.BatchCreateURLsResponse{
 				ShortURL:      v.ID,
-				CorrelationID: corellation,
+				CorrelationID: v.CorelID,
 			},
 		)
 	}
