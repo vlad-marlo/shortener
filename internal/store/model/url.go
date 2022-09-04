@@ -25,10 +25,11 @@ func NewURL(url, user string, corelationID ...int64) (*URL, error) {
 	u := &URL{
 		BaseURL: url,
 		User:    user,
-		CorelID: corelationID[0],
 	}
-	if len(corelationID) != 1 {
+	if len(corelationID) > 1 {
 		return nil, ErrURLWithUnsupporterCorelationID
+	} else if len(corelationID) == 1 {
+		u.CorelID = corelationID[0]
 	}
 	if err := u.ShortURL(); err != nil {
 		return nil, err
