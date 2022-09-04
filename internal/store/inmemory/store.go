@@ -72,6 +72,10 @@ func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.UR
 	return
 }
 
+func (s *Store) URLsBulkCreate(_ context.Context, urls []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
+	return nil, nil
+}
+
 func (s *Store) Ping(_ context.Context) error {
 	return nil
 }

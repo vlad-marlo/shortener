@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"context"
+	"database/sql"
 	"log"
 
 	"github.com/jackc/pgx/v4"
@@ -136,6 +137,69 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	}
 
 	return urls, nil
+}
+
+func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
+	if len(urls) == 0 {
+		return nil, store.ErrNoContent
+	}
+
+	response := []*model.BatchCreateURLsResponse{}
+
+	db, err := sql.Open("postgres", s.dbURL)
+	defer func() {
+		if err = db.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	// start transaction
+	tx, err := db.Begin()
+	defer func() {
+		if err = tx.Rollback(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	stmt, err := tx.PrepareContext(
+		ctx,
+		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
+	)
+	for _, v := range urls {
+		result, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.Fatalf("update drivers: unable to rollback: %v", err)
+			}
+			return nil, err
+		}
+		corellation, err := result.LastInsertId()
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.Fatalf("update drivers: unable to rollback: %v", err)
+			}
+			return nil, err
+		}
+		response = append(
+			response,
+			&model.BatchCreateURLsResponse{
+				ShortURL:      v.ID,
+				CorrelationID: corellation,
+			},
+		)
+	}
+	if err := tx.Commit(); err != nil {
+		log.Fatalf("update drivers: unable to commit: %v", err)
+		return nil, err
+	}
+
+	return response, err
 }
 
 // Ping ...

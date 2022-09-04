@@ -182,3 +182,55 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
+
+func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
+	var (
+		data []*model.BulkCreateURLRequest
+		urls = []*model.URL{}
+	)
+	body, err := io.ReadAll(r.Body)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+
+	if err := json.Unmarshal(body, &data); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+
+	var userID string
+	if user := r.Context().Value(middleware.UserCTXName); user != nil {
+		userID = user.(string)
+	} else {
+		userID = middleware.UserIDDefaultValue
+	}
+
+	for _, v := range data {
+		urls = append(
+			urls,
+			&model.URL{
+				ID:      v.CorrelationID,
+				BaseURL: v.OriginalURL,
+				User:    userID,
+			},
+		)
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	resp, err := s.Store.URLsBulkCreate(ctx, urls)
+	for i, _ := range resp {
+		id := resp[i].ShortURL
+		resp[i].ShortURL = fmt.Sprintf(s.Config.BaseURL, id)
+	}
+	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+	body, err = json.Marshal(resp)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if _, err = w.Write(body); err != nil {
+		log.Fatal(err)
+	}
+}

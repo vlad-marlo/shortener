@@ -17,4 +17,5 @@ type Store interface {
 	GetByID(context.Context, string) (*model.URL, error)
 	GetAllUserURLs(context.Context, string) ([]*model.URL, error)
 	Ping(context.Context) error
+	URLsBulkCreate(context.Context, []*model.URL) ([]*model.BatchCreateURLsResponse, error)
 }
