@@ -43,6 +43,7 @@ func (s *Server) configureRoutes() {
 
 	s.Post("/api/shorten", s.handleURLCreateJSON)
 	s.Get("/api/user/urls", s.handleGetUserURLs)
+	s.Get("/ping", s.handlePingStore)
 }
 
 // configureMiddlewares ...
