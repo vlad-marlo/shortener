@@ -9,6 +9,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
+	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
 )
 
 type Server struct {
@@ -57,8 +58,10 @@ func (s *Server) configureStore() (err error) {
 		s.Store, err = inmemory.New(), nil
 	case store.FileBasedStorage:
 		s.Store, err = filebased.New(s.Config.FilePath)
+	case store.SQLStore:
+		s.Store, err = sqlstore.New(s.Config.Database)
 	default:
-		s.Store, err = filebased.New(s.Config.FilePath)
+		s.Store, err = sqlstore.New(s.Config.FilePath)
 	}
 	return
 }
