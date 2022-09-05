@@ -220,7 +220,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	resp, err := s.Store.URLsBulkCreate(ctx, urls)
 	for _, v := range resp {
 		id := v.ShortURL
-		v.ShortURL = fmt.Sprintf(s.Config.BaseURL, id)
+		v.ShortURL = fmt.Sprintf("%s/%s", s.Config.BaseURL, id)
 	}
 
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
