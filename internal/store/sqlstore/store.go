@@ -120,13 +120,13 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1`,
 		userID,
 	)
-	defer r.Close()
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return urls, nil
 		}
 		return nil, err
 	}
+	defer r.Close()
 
 	for r.Next() {
 		u := new(model.URL)
