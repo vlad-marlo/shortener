@@ -2,11 +2,9 @@ package model
 
 import (
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -17,15 +15,16 @@ var (
 type URL struct {
 	ID      string `json:"result,omitempty"`
 	BaseURL string `json:"url"`
+	User    string `json:"user,omitempty"`
 }
 
 // NewURL ...
-func NewURL(url string) (*URL, error) {
+func NewURL(url string, user string) (*URL, error) {
 	u := &URL{
-		ID:      uuid.New().String(),
 		BaseURL: url,
+		User:    user,
 	}
-	if err := u.Validate(); err != nil {
+	if err := u.ShortURL(); err != nil {
 		return nil, err
 	}
 	return u, nil
@@ -49,6 +48,9 @@ func (u *URL) ShortURL() error {
 	if err != nil {
 		return err
 	}
-	u.ID = base64.StdEncoding.EncodeToString(b)
+	u.ID = hex.EncodeToString(b)
+	if strings.ContainsAny(u.ID, "/(=)[]{}`*&^%$#@!\\") {
+		return u.ShortURL()
+	}
 	return u.Validate()
 }

@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - dev
+      - increment_9
 
 jobs:
 
@@ -32,7 +33,7 @@ jobs:
       - name: Download autotests binaries
         uses: robinraju/release-downloader@v1.2
         with:
-          repository: Yandex-Practicum/go-autotests-bin
+          repository: Yandex-Practicum/go-autotests
           latest: true
           fileName: "*"
           out-file-path: .tools
@@ -111,13 +112,13 @@ jobs:
               -source-path=. \
               -binary-path=cmd/shortener/shortener
 
-      # - name: "Code increment #9"
-      #   if: always()
-      #   run: |
-      #     shortenertest -test.v -test.run=^TestIteration9$ \
-      #         -source-path=. \
-      #         -binary-path=cmd/shortener/shortener
-      #
+      - name: "Code increment #9"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration9$ \
+              -source-path=. \
+              -binary-path=cmd/shortener/shortener
+
       # - name: "Code increment #10"
       #   if: always()
       #   run: |
@@ -153,3 +154,14 @@ jobs:
       #     shortenertest -test.v -test.run=^TestIteration14$ \
       #         -binary-path=cmd/shortener/shortener \
       #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+      #
+      # - name: "Code increment #14 (degradation)"
+      #   if: always()
+      #   run: |
+      #     shortenertest -test.v -test.run=^TestIteration14$ \
+      #         -binary-path=cmd/shortener/shortener
+      #
+      # - name: "Code increment #14 (race detection)"
+      #   if: always()
+      #   run: |
+      #     go test -v -race ./...

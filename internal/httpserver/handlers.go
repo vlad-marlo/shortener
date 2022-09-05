@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
@@ -45,7 +46,19 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := model.NewURL(string(data))
+	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+		return
+	}
+
+	user := r.Context().Value(middleware.UserCTXName)
+	var userID string
+	if user == nil {
+		userID = middleware.UserIDDefaultValue
+	} else {
+		userID = user.(string)
+	}
+
+	u, err := model.NewURL(string(data), userID)
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
@@ -67,11 +80,20 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 		}
 	}()
-
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
-	u := &model.URL{}
+
+	var userID string
+	if user := r.Context().Value(middleware.UserCTXName); user != nil {
+		userID = user.(string)
+	} else {
+		userID = middleware.UserIDDefaultValue
+	}
+
+	u := &model.URL{
+		User: userID,
+	}
 	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
@@ -94,5 +116,42 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(res)
+	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+}
+
+func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
+	var userID string
+	if user := r.Context().Value(middleware.UserCTXName); user != nil {
+		userID = user.(string)
+	} else {
+		userID = middleware.UserIDDefaultValue
+	}
+
+	urls, err := s.Store.GetAllUserURLs(userID)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	responseURLs := []*model.AllUserURLsResponse{}
+	for _, u := range urls {
+		resp := &model.AllUserURLsResponse{
+			ShortURL:    fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID),
+			OriginalURL: u.BaseURL,
+		}
+		responseURLs = append(responseURLs, resp)
+	}
+
+	response, err := json.Marshal(responseURLs)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(response)
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }

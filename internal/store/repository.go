@@ -10,4 +10,5 @@ const (
 type Store interface {
 	Create(*model.URL) error
 	GetByID(string) (*model.URL, error)
+	GetAllUserURLs(string) ([]*model.URL, error)
 }

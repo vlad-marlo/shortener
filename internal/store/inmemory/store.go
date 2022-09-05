@@ -55,3 +55,18 @@ func (s *Store) Create(u *model.URL) (err error) {
 	s.urls[u.ID] = u
 	return
 }
+
+func (s *Store) GetAllUserURLs(user string) (urls []*model.URL, err error) {
+	if s.useMutexLocking {
+		defer s.mu.Unlock()
+		s.mu.Lock()
+	}
+
+	for _, u := range s.urls {
+		if u.User == user {
+			urls = append(urls, u)
+		}
+	}
+
+	return
+}

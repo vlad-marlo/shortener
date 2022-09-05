@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
@@ -38,12 +39,15 @@ func New(config *Config) *Server {
 func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
+
 	s.Post("/api/shorten", s.handleURLCreateJSON)
+	s.Get("/api/user/urls", s.handleGetUserURLs)
 }
 
 // configureMiddlewares ...
 func (s *Server) configureMiddlewares() {
-	s.Use(s.gzipCompression)
+	s.Use(middleware.GzipCompression)
+	s.Use(middleware.AuthMiddleware)
 }
 
 // configureStore ...
