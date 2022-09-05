@@ -123,6 +123,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 		_, err := w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
 		s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain")
 
 		return
 	} else if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {

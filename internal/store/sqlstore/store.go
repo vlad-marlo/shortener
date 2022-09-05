@@ -77,7 +77,7 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 		u.BaseURL,
 		u.User,
 	)
-	if err.Error() == pgerrcode.UniqueViolation {
+	if err != nil && err.Error() == pgerrcode.UniqueViolation {
 		if err = s.GetByOriginalURL(ctx, db, u); err != nil {
 			return err
 		}
