@@ -3,6 +3,7 @@ package sqlstore
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v4"
@@ -17,27 +18,26 @@ type SQLStore struct {
 
 // New ...
 func New(ctx context.Context, connectString string) (*SQLStore, error) {
+	s := &SQLStore{dbURL: connectString}
 	db, err := pgx.Connect(ctx, connectString)
-	defer db.Close(ctx)
 	if err != nil {
 		return nil, err
 	}
+	defer s.closeDB(ctx, db)
 
-	store := &SQLStore{dbURL: connectString}
-
-	if err := store.migrate(ctx); err != nil {
+	if err := s.migrate(ctx); err != nil {
 		log.Print(err)
 		return nil, err
 	}
 
 	log.Print("successfully created migrations")
-	return store, nil
+	return s, nil
 }
 
 // migrate ...
 func (s *SQLStore) migrate(ctx context.Context) error {
 	db, err := pgx.Connect(ctx, s.dbURL)
-	defer db.Close(ctx)
+	defer s.closeDB(ctx, db)
 
 	if err != nil {
 		return err
@@ -172,13 +172,20 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
 	)
 	for _, v := range urls {
-		_, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
+		res, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				log.Fatalf("update drivers: unable to rollback: %v", err)
 			}
 			return nil, err
 		}
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.Fatalf("update drivers: unable to rollback: %v", err)
+			}
+			return nil, err
+		}
+		corel, err := res.LastInsertId()
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				log.Fatalf("update drivers: unable to rollback: %v", err)
@@ -189,7 +196,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 			response,
 			&model.BatchCreateURLsResponse{
 				ShortURL:      v.ID,
-				CorrelationID: v.CorelID,
+				CorrelationID: fmt.Sprint(corel),
 			},
 		)
 	}

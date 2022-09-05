@@ -77,6 +77,6 @@ func (s *Store) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *Store) URLsBulkCreate(_ context.Context, urls []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
+func (s *Store) URLsBulkCreate(_ context.Context, _ []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	return nil, nil
 }

@@ -23,7 +23,6 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	url, err := s.Store.GetByID(ctx, id)
-	<-ctx.Done()
 	if err != nil {
 		s.handleErrorOrStatus(w, errors.New("where is no url with that id"), http.StatusNotFound)
 		return
@@ -185,7 +184,7 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	var (
-		data []*model.BulkCreateURLRequest
+		data = []*model.BulkCreateURLRequest{}
 		urls = []*model.URL{}
 	)
 	body, err := io.ReadAll(r.Body)
@@ -215,7 +214,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
 	resp, err := s.Store.URLsBulkCreate(ctx, urls)
@@ -227,10 +226,12 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
+
 	body, err = json.Marshal(resp)
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if _, err = w.Write(body); err != nil {

@@ -11,5 +11,5 @@ type AllUserURLsResponse struct {
 
 type BatchCreateURLsResponse struct {
 	ShortURL      string `json:"short_url"`
-	CorrelationID int64  `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 }
