@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v4"
+	_ "github.com/lib/pq"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -147,49 +148,47 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	response := []*model.BatchCreateURLsResponse{}
 
 	db, err := sql.Open("postgres", s.dbURL)
-	defer func() {
-		if err = db.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
 	if err != nil {
 		return nil, err
 	}
 
-	// start transaction
-	tx, err := db.Begin()
 	defer func() {
-		if err = tx.Rollback(); err != nil {
-			log.Fatal(err)
+		if err = db.Close(); err != nil {
+			log.Print(err)
 		}
 	}()
+
+	// start transaction
+	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
+
+	// rollback if somethink went wrong
+	defer func() {
+		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			log.Fatalf("update drivers: unable to rollback: %v", err)
+		}
+	}()
 
 	stmt, err := tx.PrepareContext(
 		ctx,
 		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
 	)
+
+	defer func() {
+		if err := stmt.Close(); err != nil && err != sql.ErrTxDone {
+			log.Fatalf("update drivers: unable to close stmt: %v", err)
+		}
+	}()
+
 	for _, v := range urls {
 		res, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				log.Fatalf("update drivers: unable to rollback: %v", err)
-			}
 			return nil, err
 		}
+		corel, err := res.RowsAffected()
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				log.Fatalf("update drivers: unable to rollback: %v", err)
-			}
-			return nil, err
-		}
-		corel, err := res.LastInsertId()
-		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				log.Fatalf("update drivers: unable to rollback: %v", err)
-			}
 			return nil, err
 		}
 		response = append(

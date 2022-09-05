@@ -56,7 +56,7 @@ func (u *URL) ShortURL() error {
 		return err
 	}
 	u.ID = hex.EncodeToString(b)
-	if strings.ContainsAny(u.ID, "/(=)[]{}`*&^%$#@!\\") {
+	if strings.ContainsAny(u.ID, "/(=)[]{}`*&^%$#@!\\<>|\"") {
 		return u.ShortURL()
 	}
 	return u.Validate()
