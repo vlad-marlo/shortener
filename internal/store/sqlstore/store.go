@@ -78,7 +78,7 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 		u.User,
 	)
 	if err.Error() == pgerrcode.UniqueViolation {
-		if err := s.GetByOriginalURL(ctx, u); err != nil {
+		if err = s.GetByOriginalURL(ctx, db, u); err != nil {
 			return err
 		}
 		return store.ErrAlreadyExists
@@ -87,16 +87,10 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 }
 
 // GetByOriginalURL
-func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
-	db, err := pgx.Connect(ctx, s.dbURL)
-	defer s.closeDB(ctx, db)
-	if err != nil {
-		return err
-	}
-
-	if err = db.QueryRow(
+func (s *SQLStore) GetByOriginalURL(ctx context.Context, db *pgx.Conn, u *model.URL) error {
+	if err := db.QueryRow(
 		ctx,
-		`SELECT short FROM urls WHERE original_url=$1;`,
+		`SELECT short FROM urls WHERE original_url = $1;`,
 		u.BaseURL,
 	).Scan(&u.ID); err != nil {
 		return err
