@@ -3,7 +3,6 @@ package sqlstore
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v4"
@@ -140,6 +139,7 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	return urls, nil
 }
 
+// URLsBulkCreate ...
 func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	if len(urls) == 0 {
 		return nil, store.ErrNoContent
@@ -183,19 +183,14 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	}()
 
 	for _, v := range urls {
-		res, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User)
-		if err != nil {
-			return nil, err
-		}
-		corel, err := res.RowsAffected()
-		if err != nil {
+		if _, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User); err != nil {
 			return nil, err
 		}
 		response = append(
 			response,
 			&model.BatchCreateURLsResponse{
 				ShortURL:      v.ID,
-				CorrelationID: fmt.Sprint(corel),
+				CorrelationID: v.CorelID,
 			},
 		)
 	}
