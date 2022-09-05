@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
@@ -71,7 +72,12 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
 	defer cancel()
 
-	if err = s.Store.Create(ctx, u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+	if err = s.Store.Create(ctx, u); err == store.ErrAlreadyExists {
+		w.WriteHeader(http.StatusConflict)
+		_, err := w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
+		s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+		return
+	} else if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 
@@ -113,7 +119,13 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
 	defer cancel()
 
-	if err = s.Store.Create(ctx, u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+	if err = s.Store.Create(ctx, u); err == store.ErrAlreadyExists {
+		w.WriteHeader(http.StatusConflict)
+		_, err := w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
+		s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
+
+		return
+	} else if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
 	}
 

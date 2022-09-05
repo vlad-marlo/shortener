@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	_ "github.com/lib/pq"
 
@@ -47,7 +48,7 @@ func (s *SQLStore) migrate(ctx context.Context) error {
 		`CREATE TABLE IF NOT EXISTS urls(
 			id SERIAL PRIMARY KEY NOT NULL,
 			short VARCHAR UNIQUE,
-			original_url VARCHAR,
+			original_url VARCHAR UNIQUE,
 			created_by VARCHAR
 		);`,
 	)
@@ -76,7 +77,33 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 		u.BaseURL,
 		u.User,
 	)
+	if err.Error() == pgerrcode.UniqueViolation {
+		url, err := s.GetByOriginalURL(ctx, u.BaseURL)
+		if err != nil {
+			return err
+		}
+		(*u).ID = url
+		return store.ErrAlreadyExists
+	}
 	return err
+}
+
+// GetByOriginalURL
+func (s *SQLStore) GetByOriginalURL(ctx context.Context, url string) (u string, err error) {
+	db, err := pgx.Connect(ctx, s.dbURL)
+	defer s.closeDB(ctx, db)
+	if err != nil {
+		return "", err
+	}
+
+	if err = db.QueryRow(
+		ctx,
+		`SELECT short FROM urls WHERE original_url=$1;`,
+		url,
+	).Scan(&u); err != nil {
+		return "", err
+	}
+	return u, nil
 }
 
 // GetByID ...
