@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -118,7 +117,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			Path:  "/",
 		}
 		http.SetCookie(w, c)
-		log.Print(rawUserID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, rawUserID)))
 	})
 }

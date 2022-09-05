@@ -83,7 +83,7 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 		}
 		return store.ErrAlreadyExists
 	}
-	return err
+	return nil
 }
 
 // GetByOriginalURL

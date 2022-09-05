@@ -52,6 +52,7 @@ func (s *Server) configureRoutes() {
 func (s *Server) configureMiddlewares() {
 	s.Use(middleware.GzipCompression)
 	s.Use(middleware.AuthMiddleware)
+	s.Use(middleware.LogResponse)
 }
 
 // configureStore ...
