@@ -70,3 +70,7 @@ func (s *Store) GetAllUserURLs(user string) (urls []*model.URL, err error) {
 
 	return
 }
+
+func (s *Store) Ping() error {
+	return nil
+}

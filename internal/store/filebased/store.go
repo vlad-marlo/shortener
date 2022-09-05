@@ -71,3 +71,7 @@ func (s *Store) GetAllUserURLs(user string) ([]*model.URL, error) {
 	}
 	return p.GetAllUserURLs(user)
 }
+
+func (s *Store) Ping() error {
+	return nil
+}

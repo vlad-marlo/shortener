@@ -3,10 +3,6 @@ name: autotests
 on:
   pull_request:
   push:
-    branches:
-      - main
-      - dev
-      - increment_9
 
 jobs:
 
@@ -119,14 +115,14 @@ jobs:
               -source-path=. \
               -binary-path=cmd/shortener/shortener
 
-      # - name: "Code increment #10"
-      #   if: always()
-      #   run: |
-      #     shortenertest -test.v -test.run=^TestIteration10$ \
-      #         -source-path=. \
-      #         -binary-path=cmd/shortener/shortener \
-      #         -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
-      #
+      - name: "Code increment #10"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration10$ \
+              -source-path=. \
+              -binary-path=cmd/shortener/shortener \
+              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+
       # - name: "Code increment #11"
       #   if: always()
       #   run: |

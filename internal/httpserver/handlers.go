@@ -155,3 +155,11 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(response)
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
+
+func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
+	if err := s.Store.Ping(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
