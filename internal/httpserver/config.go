@@ -28,7 +28,11 @@ func NewConfig() *Config {
 	flag.StringVar(&c.Database, "d", c.Database, "path to storage path")
 	flag.Parse()
 
-	if c.FilePath == "" {
+	if c.Database != "" {
+		c.StorageType = store.SQLStore
+	} else if c.FilePath != "" {
+		c.StorageType = store.FileBasedStorage
+	} else {
 		c.StorageType = store.InMemoryStorage
 	}
 	return c
