@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
@@ -71,12 +72,15 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
 	defer cancel()
 
-	if err = s.Store.Create(ctx, u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+	if err = s.Store.Create(ctx, u); err == store.ErrAlreadyExists {
+		w.WriteHeader(http.StatusConflict)
+	} else if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
+	} else {
+		w.WriteHeader(http.StatusCreated)
 	}
 
 	// generate full url like <base service url>/<url identificator>
-	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
@@ -113,8 +117,13 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
 	defer cancel()
 
-	if err = s.Store.Create(ctx, u); s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+	w.Header().Set("Content-Type", "application/json")
+	if err = s.Store.Create(ctx, u); errors.Is(err, store.ErrAlreadyExists) {
+		w.WriteHeader(http.StatusConflict)
+	} else if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
 		return
+	} else {
+		w.WriteHeader(http.StatusCreated)
 	}
 
 	resp := model.ResultResponse{
@@ -124,9 +133,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 
-	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(res)
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
@@ -214,7 +221,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
 	resp, err := s.Store.URLsBulkCreate(ctx, urls)

@@ -20,21 +20,33 @@ type Server struct {
 	Config *Config
 }
 
-// New return new configured server with params from config object
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
 		Router: chi.NewRouter(),
 	}
-
 	s.configureMiddlewares()
+	log.Print("middleware configured successfully")
 	s.configureRoutes()
 	log.Print("routes configured successfully")
 
+	return s
+}
+
+// New return new configured server with params from config object
+// need for creating only one connection to db
+func Start(config *Config) error {
+	s := New(config)
+
 	s.configureStore()
+	defer func() {
+		if err := s.Store.Close(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	log.Print("store configured successfully")
 
-	return s
+	return s.ListenAndServe()
 }
 
 // configureRoutes ...
@@ -52,6 +64,7 @@ func (s *Server) configureRoutes() {
 func (s *Server) configureMiddlewares() {
 	s.Use(middleware.GzipCompression)
 	s.Use(middleware.AuthMiddleware)
+	s.Use(middleware.LogResponse)
 }
 
 // configureStore ...

@@ -106,6 +106,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	})
+	require.NoError(t, s.configureStore())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -177,6 +178,7 @@ func TestServer_HandleURLGet(t *testing.T) {
 		FilePath:    "test.json",
 		StorageType: store.InMemoryStorage,
 	})
+	require.NoError(t, s.configureStore())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -272,6 +274,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	})
+	require.NoError(t, s.configureStore())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()

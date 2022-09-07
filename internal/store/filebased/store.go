@@ -80,3 +80,7 @@ func (s *Store) Ping(_ context.Context) error {
 func (s *Store) URLsBulkCreate(_ context.Context, _ []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	return nil, nil
 }
+
+func (s *Store) Close(_ context.Context) error {
+	return nil
+}

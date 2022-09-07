@@ -100,6 +100,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
+			log.Print(err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
@@ -107,6 +108,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
+			log.Print(err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
@@ -118,7 +120,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			Path:  "/",
 		}
 		http.SetCookie(w, c)
-		log.Print(rawUserID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, rawUserID)))
 	})
 }

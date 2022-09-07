@@ -18,4 +18,5 @@ type Store interface {
 	GetAllUserURLs(context.Context, string) ([]*model.URL, error)
 	Ping(context.Context) error
 	URLsBulkCreate(context.Context, []*model.URL) ([]*model.BatchCreateURLsResponse, error)
+	Close(context.Context) error
 }
