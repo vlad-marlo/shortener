@@ -227,7 +227,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
 	resp, err := s.Store.URLsBulkCreate(ctx, urls)

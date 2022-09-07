@@ -7,24 +7,23 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 type SQLStore struct {
-	DB            *pgx.Conn
-	ConnectString string
+	DB *sql.DB
 }
 
 // New ...
 func New(ctx context.Context, connectString string) (*SQLStore, error) {
-	db, err := pgx.Connect(ctx, connectString)
+	db, err := sql.Open("postgres", connectString)
 	if err != nil {
 		return nil, err
 	}
-	s := &SQLStore{DB: db, ConnectString: connectString}
+	s := &SQLStore{DB: db}
 
 	if err := s.migrate(ctx); err != nil {
 		log.Print(err)
@@ -37,11 +36,11 @@ func New(ctx context.Context, connectString string) (*SQLStore, error) {
 
 // migrate run migrations instead of go-migrate package
 func (s *SQLStore) migrate(ctx context.Context) error {
-	_, err := s.DB.Exec(
+	_, err := s.DB.ExecContext(
 		ctx,
 		`CREATE TABLE IF NOT EXISTS urls(
-			id SERIAL PRIMARY KEY NOT NULL,
-			short VARCHAR UNIQUE,
+			id SERIAL UNIQUE PRIMARY KEY NOT NULL,
+			short VARCHAR,
 			original_url VARCHAR UNIQUE,
 			created_by VARCHAR
 		);`,
@@ -51,25 +50,31 @@ func (s *SQLStore) migrate(ctx context.Context) error {
 
 // Create ...
 func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
-	_, err := s.DB.Exec(
+	_, err := s.DB.ExecContext(
 		ctx,
-		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
+		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3);`,
 		u.ID,
 		u.BaseURL,
 		u.User,
 	)
-	if err != nil && err.Error() == pgerrcode.UniqueViolation {
-		if err = s.GetByOriginalURL(ctx, u); err != nil {
-			return err
+
+	log.Print(err)
+	if err != nil {
+		pgErr := err.(*pq.Error)
+		if pgErr.Code == pgerrcode.UniqueViolation {
+			if err := s.GetByOriginalURL(ctx, u); err != nil {
+				return err
+			}
+			return store.ErrAlreadyExists
 		}
-		return store.ErrAlreadyExists
+		return err
 	}
 	return nil
 }
 
-// GetByOriginalURL
+// GetByOriginalURL ...
 func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
-	if err := s.DB.QueryRow(
+	if err := s.DB.QueryRowContext(
 		ctx,
 		`SELECT short FROM urls WHERE original_url = $1;`,
 		u.BaseURL,
@@ -83,9 +88,9 @@ func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 
 	u := &model.URL{}
-	if err := s.DB.QueryRow(
+	if err := s.DB.QueryRowContext(
 		ctx,
-		`SELECT short, original_url, created_by FROM urls WHERE short=$1`,
+		`SELECT short, original_url, created_by FROM urls WHERE short=$1;`,
 		id,
 	).Scan(
 		&u.ID,
@@ -104,7 +109,7 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.URL, error) {
 	urls := []*model.URL{}
 
-	r, err := s.DB.Query(
+	r, err := s.DB.QueryContext(
 		ctx,
 		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1`,
 		userID,
@@ -136,19 +141,8 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	response := []*model.BatchCreateURLsResponse{}
 
-	db, err := sql.Open("postgres", s.ConnectString)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err = db.Close(); err != nil {
-			log.Print(err)
-		}
-	}()
-
 	// start transaction
-	tx, err := db.Begin()
+	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +156,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	stmt, err := tx.PrepareContext(
 		ctx,
-		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3)`,
+		`INSERT INTO urls(short, original_url, created_by) VALUES ($1, $2, $3);`,
 	)
 
 	defer func() {
@@ -173,7 +167,17 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	for _, v := range urls {
 		if _, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User); err != nil {
-			return nil, err
+			pgERR := err.(*pq.Error)
+			if pgERR.Code != pgerrcode.UniqueViolation {
+				return nil, err
+			}
+			if err := tx.QueryRowContext(
+				ctx,
+				`SELECT short FROM urls WHERE original_url = $1`,
+				v.BaseURL,
+			).Scan(&v.ID); err != nil {
+				return nil, err
+			}
 		}
 		response = append(
 			response,
@@ -193,9 +197,10 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 // Ping ...
 func (s *SQLStore) Ping(ctx context.Context) error {
-	return s.DB.Ping(ctx)
+	return s.DB.PingContext(ctx)
 }
 
+// Close ...
 func (s *SQLStore) Close(ctx context.Context) error {
-	return s.DB.Close(ctx)
+	return s.DB.Close()
 }
