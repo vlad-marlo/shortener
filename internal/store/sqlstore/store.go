@@ -120,6 +120,9 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 		}
 		return nil, err
 	}
+	if err := r.Err(); err != nil {
+		return nil, err
+	}
 	defer r.Close()
 
 	for r.Next() {
