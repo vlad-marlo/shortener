@@ -79,3 +79,7 @@ func (s *Store) URLsBulkCreate(_ context.Context, _ []*model.URL) ([]*model.Batc
 func (s *Store) Ping(_ context.Context) error {
 	return nil
 }
+
+func (s *Store) Close(_ context.Context) error {
+	return nil
+}

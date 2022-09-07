@@ -8,8 +8,7 @@ import (
 
 func main() {
 	config := httpserver.NewConfig()
-	s := httpserver.New(config)
-	if err := s.ListenAndServe(); err != nil {
+	if err := httpserver.Start(config); err != nil {
 		log.Fatal(err)
 	}
 }

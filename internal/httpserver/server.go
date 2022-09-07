@@ -21,7 +21,8 @@ type Server struct {
 }
 
 // New return new configured server with params from config object
-func New(config *Config) *Server {
+// need for creating only one connection to db
+func Start(config *Config) error {
 	s := &Server{
 		Config: config,
 		Router: chi.NewRouter(),
@@ -32,9 +33,14 @@ func New(config *Config) *Server {
 	log.Print("routes configured successfully")
 
 	s.configureStore()
+	defer func() {
+		if err := s.Store.Close(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	log.Print("store configured successfully")
 
-	return s
+	return s.ListenAndServe()
 }
 
 // configureRoutes ...
