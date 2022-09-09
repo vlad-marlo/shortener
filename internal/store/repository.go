@@ -1,13 +1,22 @@
 package store
 
-import "github.com/vlad-marlo/shortener/internal/store/model"
+import (
+	"context"
+
+	"github.com/vlad-marlo/shortener/internal/store/model"
+)
 
 const (
 	InMemoryStorage  string = "inmemory"
 	FileBasedStorage string = "file-based"
+	SQLStore         string = "sql-store"
 )
 
 type Store interface {
-	Create(*model.URL) error
-	GetByID(string) (*model.URL, error)
+	Create(context.Context, *model.URL) error
+	GetByID(context.Context, string) (*model.URL, error)
+	GetAllUserURLs(context.Context, string) ([]*model.URL, error)
+	Ping(context.Context) error
+	URLsBulkCreate(context.Context, []*model.URL) ([]*model.BatchCreateURLsResponse, error)
+	Close(context.Context) error
 }

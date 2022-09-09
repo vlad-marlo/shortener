@@ -1,4 +1,4 @@
-package httpserver
+package middleware
 
 import (
 	"compress/gzip"
@@ -18,8 +18,8 @@ func (w gzipWriter) Write(data []byte) (int, error) {
 	return w.Writer.Write(data)
 }
 
-// gzipCompression middleware func
-func (s *Server) gzipCompression(next http.Handler) http.Handler {
+// GzipCompression middleware
+func GzipCompression(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("content-encoding"), "gzip") {
 			reader, err := gzip.NewReader(r.Body)

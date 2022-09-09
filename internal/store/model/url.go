@@ -2,30 +2,36 @@ package model
 
 import (
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 var (
-	ErrURLContainSpace = errors.New("url must have no spaces in it")
-	ErrURLTooShort     = errors.New("url must be 4 or more chars long")
+	ErrURLContainSpace     = errors.New("url must have no spaces in it")
+	ErrURLTooShort         = errors.New("url must be 4 or more chars long")
+	ErrURLBadCorrelationID = errors.New("correlation ID must be one")
 )
 
 type URL struct {
-	ID      string `json:"result,omitempty"`
 	BaseURL string `json:"url"`
+	User    string `json:"user,omitempty"`
+	CorelID string `json:"-"`
+	ID      string `json:"result,omitempty"`
 }
 
 // NewURL ...
-func NewURL(url string) (*URL, error) {
+func NewURL(url, user string, correlationID ...string) (*URL, error) {
 	u := &URL{
-		ID:      uuid.New().String(),
 		BaseURL: url,
+		User:    user,
 	}
-	if err := u.Validate(); err != nil {
+	if len(correlationID) > 1 {
+		return nil, ErrURLBadCorrelationID
+	} else if len(correlationID) == 1 {
+		u.CorelID = correlationID[0]
+	}
+	if err := u.ShortURL(); err != nil {
 		return nil, err
 	}
 	return u, nil
@@ -49,6 +55,9 @@ func (u *URL) ShortURL() error {
 	if err != nil {
 		return err
 	}
-	u.ID = base64.StdEncoding.EncodeToString(b)
+	u.ID = hex.EncodeToString(b)
+	if strings.ContainsAny(u.ID, "/(=)[]{}`*&^%$#@!\\<>|\"") {
+		return u.ShortURL()
+	}
 	return u.Validate()
 }
