@@ -80,6 +80,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, store.ErrAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
 			_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
+			s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 			return
 		}
 		s.handleErrorOrStatus(w, err, http.StatusBadRequest)
