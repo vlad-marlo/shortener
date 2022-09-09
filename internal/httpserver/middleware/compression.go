@@ -25,10 +25,10 @@ func GzipCompression(next http.Handler) http.Handler {
 			reader, err := gzip.NewReader(r.Body)
 			defer func() {
 				if err = reader.Close(); err != nil {
-					log.Print(err)
+					log.Printf("reader close: %v", err)
 				}
 				if err = r.Body.Close(); err != nil {
-					log.Print(err)
+					log.Printf("body close: %v", err)
 				}
 			}()
 			if err != nil {
@@ -50,7 +50,7 @@ func GzipCompression(next http.Handler) http.Handler {
 		}
 		defer func() {
 			if err = gz.Close(); err != nil {
-				log.Print(err)
+				log.Printf("gz close: %v", err)
 			}
 		}()
 

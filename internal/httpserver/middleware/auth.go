@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -32,7 +33,7 @@ var encryptor *Encryptor
 func generateRandom(size int) ([]byte, error) {
 	b := make([]byte, size)
 	if _, err := rand.Read(b); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rand read: %v", err)
 	}
 	return b, nil
 }
@@ -45,22 +46,22 @@ func NewEncryptor() error {
 
 	key, err := generateRandom(aes.BlockSize)
 	if err != nil {
-		return err
+		return fmt.Errorf("generate key: %v", err)
 	}
 
 	aesBlock, err := aes.NewCipher(key)
 	if err != nil {
-		return err
+		return fmt.Errorf("initialize cipher: %v", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(aesBlock)
 	if err != nil {
-		return err
+		return fmt.Errorf("initialize GCM encryptor: %v", err)
 	}
 
 	nonce, err := generateRandom(aesGCM.NonceSize())
 	if err != nil {
-		return err
+		return fmt.Errorf("initialize GCM nonce: %v", err)
 	}
 
 	encryptor = &Encryptor{
@@ -82,12 +83,12 @@ func (e *Encryptor) EncodeUUID(uuid string) string {
 func (e *Encryptor) DecodeUUID(uuid string, to *string) error {
 	dst, err := hex.DecodeString(uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("hex decode: %v", err)
 	}
 
 	src, err := e.GCM.Open(nil, e.nonce, dst, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("gcm open: %v", err)
 	}
 
 	*to = string(src)
@@ -100,7 +101,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
-			log.Print(err)
+			log.Printf("new encryptor: %v", err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
@@ -108,7 +109,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
-			log.Print(err)
+			log.Printf("decode: %v", err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}

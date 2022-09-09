@@ -16,11 +16,15 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
+const (
+	cancelCoolDown time.Duration = 30 * time.Millisecond
+)
+
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
 
-	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
 	defer cancel()
 
 	url, err := s.Store.GetByID(ctx, id)
@@ -40,7 +44,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	data, err := io.ReadAll(r.Body)
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			log.Print(err)
+			log.Printf("r body close: %v", err)
 		}
 	}()
 
@@ -69,16 +73,20 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
 	defer cancel()
 
-	if err = s.Store.Create(ctx, u); err == store.ErrAlreadyExists {
-		w.WriteHeader(http.StatusConflict)
-	} else if s.handleErrorOrStatus(w, err, http.StatusBadRequest) {
+	if err = s.Store.Create(ctx, u); err != nil {
+		if errors.Is(err, store.ErrAlreadyExists) {
+			w.WriteHeader(http.StatusConflict)
+			_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
+			return
+		}
+		s.handleErrorOrStatus(w, err, http.StatusBadRequest)
 		return
-	} else {
-		w.WriteHeader(http.StatusCreated)
 	}
+
+	w.WriteHeader(http.StatusCreated)
 
 	// generate full url like <base service url>/<url identificator>
 	_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
@@ -89,7 +97,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	req, err := io.ReadAll(r.Body)
 	defer func() {
 		if err = r.Body.Close(); err != nil {
-			log.Print(err)
+			log.Printf("r body close: %v", err)
 		}
 	}()
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
@@ -114,7 +122,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
 	defer cancel()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -146,7 +154,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 		userID = middleware.UserIDDefaultValue
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
 	defer cancel()
 
 	urls, err := s.Store.GetAllUserURLs(ctx, userID)
@@ -179,11 +187,11 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
 	defer cancel()
 
 	if err := s.Store.Ping(ctx); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		s.handleErrorOrStatus(w, fmt.Errorf("handlePingStore: %w", err), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -221,7 +229,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(len(urls))*cancelCoolDown)
 	defer cancel()
 
 	resp, err := s.Store.URLsBulkCreate(ctx, urls)
