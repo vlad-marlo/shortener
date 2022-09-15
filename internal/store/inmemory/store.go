@@ -80,6 +80,6 @@ func (s *Store) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *Store) Close(_ context.Context) error {
+func (s *Store) Close() error {
 	return nil
 }

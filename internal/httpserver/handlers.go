@@ -20,6 +20,7 @@ const (
 	cancelCoolDown time.Duration = 30 * time.Millisecond
 )
 
+// handleURLGet ...
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
@@ -37,6 +38,7 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// handleURLCreate ...
 func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	// setting up response meta info
 	w.Header().Set("Content-Type", "text/plain")
@@ -94,6 +96,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
+// handleURLCreateJSON ...
 func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	req, err := io.ReadAll(r.Body)
 	defer func() {
@@ -147,6 +150,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
+// handleGetUserURLs ...
 func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	var userID string
 	if user := r.Context().Value(middleware.UserCTXName); user != nil {
@@ -187,6 +191,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
 
+// handlePingStore ...
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
 	defer cancel()
@@ -198,6 +203,7 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleURLBulkCreate ...
 func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	var (
 		data = []*model.BulkCreateURLRequest{}

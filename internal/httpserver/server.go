@@ -20,6 +20,7 @@ type Server struct {
 	Config *Config
 }
 
+// New ...
 func New(config *Config) *Server {
 	s := &Server{
 		Config: config,
@@ -38,7 +39,10 @@ func New(config *Config) *Server {
 func Start(config *Config) error {
 	s := New(config)
 
-	s.configureStore()
+	if err := s.configureStore(); err != nil {
+		return err
+	}
+
 	defer func() {
 		if err := s.Store.Close(context.Background()); err != nil {
 			log.Fatal(err)

@@ -204,6 +204,6 @@ func (s *SQLStore) Ping(ctx context.Context) error {
 }
 
 // Close ...
-func (s *SQLStore) Close(ctx context.Context) error {
+func (s *SQLStore) Close() error {
 	return s.DB.Close()
 }
