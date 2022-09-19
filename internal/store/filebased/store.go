@@ -81,6 +81,6 @@ func (s *Store) URLsBulkCreate(_ context.Context, _ []*model.URL) ([]*model.Batc
 	return nil, nil
 }
 
-func (s *Store) Close(_ context.Context) error {
+func (s *Store) Close() error {
 	return nil
 }

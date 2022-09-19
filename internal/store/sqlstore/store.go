@@ -153,7 +153,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	// rollback if somethink went wrong
 	defer func() {
 		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Fatalf("update drivers: unable to rollback: %v", err)
+			log.Printf("update drivers: unable to rollback: %v", err)
 		}
 	}()
 
@@ -164,7 +164,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	defer func() {
 		if err := stmt.Close(); err != nil && err != sql.ErrTxDone {
-			log.Fatalf("update drivers: unable to close stmt: %v", err)
+			log.Printf("update drivers: unable to close stmt: %v", err)
 		}
 	}()
 
@@ -191,7 +191,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		)
 	}
 	if err := tx.Commit(); err != nil {
-		log.Fatalf("update drivers: unable to commit: %v", err)
+		log.Printf("update drivers: unable to commit: %v", err)
 		return nil, err
 	}
 
@@ -204,6 +204,6 @@ func (s *SQLStore) Ping(ctx context.Context) error {
 }
 
 // Close ...
-func (s *SQLStore) Close(ctx context.Context) error {
+func (s *SQLStore) Close() error {
 	return s.DB.Close()
 }

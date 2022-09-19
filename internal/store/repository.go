@@ -13,10 +13,10 @@ const (
 )
 
 type Store interface {
+	Ping(context.Context) error
+	Close() error
 	Create(context.Context, *model.URL) error
 	GetByID(context.Context, string) (*model.URL, error)
 	GetAllUserURLs(context.Context, string) ([]*model.URL, error)
-	Ping(context.Context) error
 	URLsBulkCreate(context.Context, []*model.URL) ([]*model.BatchCreateURLsResponse, error)
-	Close(context.Context) error
 }

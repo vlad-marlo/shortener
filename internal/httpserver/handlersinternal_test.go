@@ -15,6 +15,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// testRequest ...
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, []byte) {
 	req, err := http.NewRequest(method, ts.URL+path, body)
 	require.NoError(t, err)
@@ -28,6 +29,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	return resp, respBody
 }
 
+// TestServer_HandleURLGetAndCreate ...
 func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	type args struct {
 		urlPath    string
@@ -192,6 +194,7 @@ func TestServer_HandleURLGet(t *testing.T) {
 	}
 }
 
+// TestServer_HandleURLGetAndCreateJSON ...
 func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 	type (
 		request struct {
