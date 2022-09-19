@@ -44,7 +44,7 @@ func Start(config *Config) error {
 	}
 
 	defer func() {
-		if err := s.Store.Close(context.Background()); err != nil {
+		if err := s.Store.Close(); err != nil {
 			log.Fatal(err)
 		}
 	}()
