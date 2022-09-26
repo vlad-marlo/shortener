@@ -3,6 +3,7 @@ package sqlstore
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgerrcode"
@@ -59,7 +60,6 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 		u.User,
 	)
 
-	log.Print(err)
 	if err != nil {
 		pgErr := err.(*pq.Error)
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -207,8 +207,12 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	return response, err
 }
 
-// DeleteURLs
+// URLsBulkDelete ...
 func (s *SQLStore) URLsBulkDelete(ctx context.Context, urls []string, user string) error {
+	ids := pq.Array(urls)
+	if _, err := s.DB.ExecContext(ctx, "UPDATE users SET is_deleted=true WHERE created_by=$1 AND short IN $2;", user, ids); err != nil {
+		return fmt.Errorf("urls bulk delete: %v", err)
+	}
 	return nil
 }
 

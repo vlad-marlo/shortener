@@ -85,16 +85,17 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, store.ErrAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
 			_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
+
 			s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 			return
 		}
+
 		s.handleErrorOrStatus(w, err, http.StatusBadRequest)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 
-	// generate full url like <base service url>/<url identificator>
 	_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.Config.BaseURL, u.ID)))
 	s.handleErrorOrStatus(w, err, http.StatusInternalServerError)
 }
