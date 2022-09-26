@@ -58,10 +58,17 @@ func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
 
-	s.Post("/api/shorten", s.handleURLCreateJSON)
-	s.Get("/api/user/urls", s.handleGetUserURLs)
 	s.Get("/ping", s.handlePingStore)
-	s.Post("/api/shorten/batch", s.handleURLBulkCreate)
+
+	s.Route("/api", func(r chi.Router) {
+		r.Post("/shorten", s.handleURLCreateJSON)
+		r.Post("/shorten/batch", s.handleURLBulkCreate)
+
+		r.Route("/user/urls", func(r chi.Router) {
+			r.Get("/", s.handleGetUserURLs)
+			r.Delete("/", s.handleURLBulkDelete)
+		})
+	})
 }
 
 // configureMiddlewares ...

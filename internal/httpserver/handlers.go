@@ -263,3 +263,25 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 }
+
+// handleURLBulkDelete ...
+func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
+	var data []string
+
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
+
+	body, err := io.ReadAll(r.Body)
+	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {
+		return
+	}
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		s.handleErrorOrStatus(w, fmt.Errorf("handle bulk url delete: json unmarshal data: %v", err), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}

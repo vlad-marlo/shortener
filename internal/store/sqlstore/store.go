@@ -90,8 +90,8 @@ func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 
 // GetByID ...
 func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
-
 	u := &model.URL{}
+
 	if err := s.DB.QueryRowContext(
 		ctx,
 		`SELECT short, original_url, created_by, is_deleted FROM urls WHERE short=$1;`,
@@ -107,6 +107,7 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 		}
 		return nil, err
 	}
+
 	if u.IsDeleted {
 		return nil, store.ErrIsDeleted
 	}
@@ -207,7 +208,8 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 }
 
 // DeleteURLs
-func (s *SQLStore) URLsBulkDelete(ctx context.Context, urls []string, user string) {
+func (s *SQLStore) URLsBulkDelete(ctx context.Context, urls []string, user string) error {
+	return nil
 }
 
 // Ping ...
