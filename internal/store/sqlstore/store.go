@@ -42,7 +42,8 @@ func (s *SQLStore) migrate(ctx context.Context) error {
 			id SERIAL UNIQUE PRIMARY KEY NOT NULL,
 			short VARCHAR,
 			original_url VARCHAR UNIQUE,
-			created_by VARCHAR
+			created_by VARCHAR,
+			is_deleted BOOL DEFAULT FALSE
 		);`,
 	)
 	return err
@@ -76,10 +77,13 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 	if err := s.DB.QueryRowContext(
 		ctx,
-		`SELECT short FROM urls WHERE original_url = $1;`,
+		`SELECT short, is_deleted FROM urls WHERE original_url = $1;`,
 		u.BaseURL,
-	).Scan(&u.ID); err != nil {
+	).Scan(&u.ID, &u.IsDeleted); err != nil {
 		return err
+	}
+	if u.IsDeleted {
+		return store.ErrIsDeleted
 	}
 	return nil
 }
@@ -90,17 +94,21 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	u := &model.URL{}
 	if err := s.DB.QueryRowContext(
 		ctx,
-		`SELECT short, original_url, created_by FROM urls WHERE short=$1;`,
+		`SELECT short, original_url, created_by, is_deleted FROM urls WHERE short=$1;`,
 		id,
 	).Scan(
 		&u.ID,
 		&u.BaseURL,
 		&u.User,
+		&u.IsDeleted,
 	); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, store.ErrNotFound
 		}
 		return nil, err
+	}
+	if u.IsDeleted {
+		return nil, store.ErrIsDeleted
 	}
 	return u, nil
 }
@@ -111,7 +119,7 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 
 	r, err := s.DB.QueryContext(
 		ctx,
-		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1`,
+		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1 AND is_deleted = false;`,
 		userID,
 	)
 	if err != nil {
@@ -196,6 +204,10 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	}
 
 	return response, err
+}
+
+// DeleteURLs
+func (s *SQLStore) URLsBulkDelete(ctx context.Context, urls []string, user string) {
 }
 
 // Ping ...

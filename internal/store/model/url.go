@@ -14,17 +14,19 @@ var (
 )
 
 type URL struct {
-	BaseURL string `json:"url"`
-	User    string `json:"user,omitempty"`
-	CorelID string `json:"-"`
-	ID      string `json:"result,omitempty"`
+	BaseURL   string `json:"url"`
+	User      string `json:"user,omitempty"`
+	CorelID   string `json:"-"`
+	ID        string `json:"result,omitempty"`
+	IsDeleted bool   `json:"-"`
 }
 
 // NewURL ...
 func NewURL(url, user string, correlationID ...string) (*URL, error) {
 	u := &URL{
-		BaseURL: url,
-		User:    user,
+		BaseURL:   url,
+		User:      user,
+		IsDeleted: false,
 	}
 	if len(correlationID) > 1 {
 		return nil, ErrURLBadCorrelationID

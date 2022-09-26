@@ -29,7 +29,10 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	url, err := s.Store.GetByID(ctx, id)
-	if err != nil {
+	if errors.Is(err, store.ErrIsDeleted) {
+		w.WriteHeader(http.StatusGone)
+		return
+	} else if err != nil {
 		s.handleErrorOrStatus(w, errors.New("where is no url with that id"), http.StatusNotFound)
 		return
 	}
