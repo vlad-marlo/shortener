@@ -51,7 +51,9 @@ func (s *Store) Create(_ context.Context, u *model.URL) (err error) {
 		return
 	}
 	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
-		u.ShortURL()
+		if err = u.ShortURL(); err != nil {
+			return
+		}
 	}
 	s.urls[u.ID] = u
 	return

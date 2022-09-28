@@ -296,7 +296,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 				body,
 			)
 			defer require.NoError(t, res.Body.Close())
-			json.Unmarshal(url, &resp)
+			require.NoError(t, json.Unmarshal(url, &resp))
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {

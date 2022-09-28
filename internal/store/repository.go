@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	InMemoryStorage  string = "inmemory"
+	InMemoryStorage  string = "in-memory"
 	FileBasedStorage string = "file-based"
 	SQLStore         string = "sql-store"
 )

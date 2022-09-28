@@ -4,11 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
-
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/lib/pq"
+	"log"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -132,7 +131,11 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	if err := r.Err(); err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func(r *sql.Rows) {
+		if err := r.Close(); err != nil {
+			log.Printf("closing rows: %v", err)
+		}
+	}(r)
 
 	for r.Next() {
 		u := new(model.URL)
@@ -159,7 +162,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		return nil, err
 	}
 
-	// rollback if somethink went wrong
+	// rollback if something went wrong
 	defer func() {
 		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
 			log.Printf("update drivers: unable to rollback: %v", err)
@@ -210,7 +213,12 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 // URLsBulkDelete ...
 func (s *SQLStore) URLsBulkDelete(ctx context.Context, urls []string, user string) error {
 	ids := pq.Array(urls)
-	if _, err := s.DB.ExecContext(ctx, "UPDATE users SET is_deleted=true WHERE created_by=$1 AND short IN $2;", user, ids); err != nil {
+	if _, err := s.DB.ExecContext(
+		ctx,
+		"UPDATE urls SET is_deleted=true WHERE created_by=$1 AND short IN $2;",
+		user,
+		ids,
+	); err != nil {
 		return fmt.Errorf("urls bulk delete: %v", err)
 	}
 	return nil
