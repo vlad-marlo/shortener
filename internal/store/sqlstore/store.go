@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/lib/pq"
-	"log"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -211,10 +212,9 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 }
 
 // URLsBulkDelete ...
-func (s *SQLStore) URLsBulkDelete(ctx context.Context, urls []string, user string) error {
+func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 	ids := pq.Array(urls)
-	if _, err := s.DB.ExecContext(
-		ctx,
+	if _, err := s.DB.Exec(
 		"UPDATE urls SET is_deleted=true WHERE created_by=$1 AND short IN $2;",
 		user,
 		ids,

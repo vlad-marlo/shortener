@@ -1,6 +1,7 @@
 package poll
 
 import (
+	"log"
 	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -26,12 +27,31 @@ func New(store store.Store) *Poll {
 		input: make(chan *task),
 		stop:  make(chan struct{}),
 	}
+	go p.start_polling()
 	return p
 }
 
+// DeleteURLs ...
 func (p *Poll) DeleteURLs(urls []string, user string) {
 	p.input <- &task{
 		ids:  urls,
 		user: user,
 	}
+}
+
+func (p *Poll) start_polling() {
+	for {
+		select {
+		case <-p.stop:
+			return
+		case t := <-p.input:
+			if err := p.store.URLsBulkDelete(t.ids, t.user); err != nil {
+				log.Printf("poll: start_polling: %v", err)
+			}
+		}
+	}
+}
+
+func (p *Poll) Close() {
+	close(p.stop)
 }

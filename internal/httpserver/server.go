@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -44,8 +45,11 @@ func Start(config *Config) error {
 	s := New(config)
 
 	if err := s.configureStore(); err != nil {
-		return err
+		return fmt.Errorf("configure store: %v", err)
 	}
+
+	s.configurePoller()
+	defer s.poller.Close()
 
 	defer func() {
 		if err := s.store.Close(); err != nil {
