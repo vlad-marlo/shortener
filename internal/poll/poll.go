@@ -19,10 +19,6 @@ type (
 		input  map[string]chan string
 		ticker *time.Ticker
 	}
-	Task struct {
-		User string
-		IDs  []string
-	}
 )
 
 // New ...
