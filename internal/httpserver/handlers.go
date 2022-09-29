@@ -263,6 +263,6 @@ func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 		s.handleErrorOrStatus(w, fmt.Errorf("handle bulk url delete: json unmarshal data: %v", err), http.StatusBadRequest)
 		return
 	}
-	s.poller.DeleteURLs(data, userID)
+	go s.poller.DeleteURLs(data, userID)
 	w.WriteHeader(http.StatusAccepted)
 }
