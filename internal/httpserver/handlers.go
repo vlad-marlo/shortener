@@ -158,7 +158,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseURLs := []*model.AllUserURLsResponse{}
+	var responseURLs []*model.AllUserURLsResponse
 	for _, u := range urls {
 		resp := &model.AllUserURLsResponse{
 			ShortURL:    fmt.Sprintf("%s/%s", s.config.BaseURL, u.ID),
@@ -193,8 +193,8 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 // handleURLBulkCreate ...
 func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	var (
-		data = []*model.BulkCreateURLRequest{}
-		urls = []*model.URL{}
+		data []*model.BulkCreateURLRequest
+		urls []*model.URL
 	)
 	body, err := io.ReadAll(r.Body)
 	if s.handleErrorOrStatus(w, err, http.StatusInternalServerError) {

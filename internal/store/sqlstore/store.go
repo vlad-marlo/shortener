@@ -116,7 +116,7 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 
 // GetAllUserURLs ...
 func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.URL, error) {
-	urls := []*model.URL{}
+	var urls []*model.URL
 
 	r, err := s.DB.QueryContext(
 		ctx,
@@ -155,7 +155,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		return nil, store.ErrNoContent
 	}
 
-	response := []*model.BatchCreateURLsResponse{}
+	var response []*model.BatchCreateURLsResponse
 
 	// start transaction
 	tx, err := s.DB.Begin()
@@ -215,7 +215,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 	ids := pq.Array(urls)
 	if _, err := s.DB.Exec(
-		"UPDATE urls SET is_deleted=true WHERE created_by=$1 AND short IN $2;",
+		"UPDATE urls SET is_deleted=true WHERE created_by=$1 AND short = ANY($2);",
 		user,
 		ids,
 	); err != nil {

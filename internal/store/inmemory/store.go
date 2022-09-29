@@ -35,7 +35,7 @@ func (s *Store) GetByID(_ context.Context, id string) (u *model.URL, err error) 
 	err = nil
 	u, ok := s.urls[id]
 	if !ok {
-		err = store.ErrAlreadyExists
+		return nil, store.ErrNotFound
 	}
 	if u.IsDeleted {
 		return nil, store.ErrIsDeleted

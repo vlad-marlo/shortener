@@ -72,9 +72,9 @@ func (s *Server) configureRoutes() {
 		r.Post("/shorten", s.handleURLCreateJSON)
 		r.Post("/shorten/batch", s.handleURLBulkCreate)
 
-		r.Route("/user/urls", func(r chi.Router) {
-			r.Get("/", s.handleGetUserURLs)
-			r.Delete("/", s.handleURLBulkDelete)
+		r.Route("/user/urls", func(rc chi.Router) {
+			rc.Get("/", s.handleGetUserURLs)
+			rc.Delete("/", s.handleURLBulkDelete)
 		})
 	})
 }
@@ -87,8 +87,6 @@ func (s *Server) configureMiddlewares() {
 		middleware.AuthMiddleware,
 
 		// chi middlewares
-		chimiddlewares.RealIP,
-		chimiddlewares.RequestID,
 		chimiddlewares.Logger,
 	)
 }

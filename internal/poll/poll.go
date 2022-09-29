@@ -27,7 +27,7 @@ func New(store store.Store) *Poll {
 		input: make(chan *task),
 		stop:  make(chan struct{}),
 	}
-	go p.start_polling()
+	go p.startPolling()
 	return p
 }
 
@@ -39,7 +39,7 @@ func (p *Poll) DeleteURLs(urls []string, user string) {
 	}
 }
 
-func (p *Poll) start_polling() {
+func (p *Poll) startPolling() {
 	for {
 		select {
 		case <-p.stop:
