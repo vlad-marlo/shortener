@@ -1,61 +1,82 @@
 package poll
 
 import (
-	"log"
 	"sync"
+	"time"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+const (
+	PollInterval = 75 * time.Millisecond
+)
+
 type (
 	Poll struct {
-		store store.Store
-		mu    sync.Mutex
-		input chan *task
-		stop  chan struct{}
+		store  store.Store
+		mu     sync.Mutex
+		stop   chan struct{}
+		input  map[string]chan string
+		ticker *time.Ticker
 	}
-	task struct {
-		user string
-		ids  []string
+	Task struct {
+		User string
+		IDs  []string
 	}
 )
 
 // New ...
 func New(store store.Store) *Poll {
 	p := &Poll{
-		store: store,
-		input: make(chan *task),
-		stop:  make(chan struct{}),
+		store:  store,
+		stop:   make(chan struct{}),
+		ticker: time.NewTicker(PollInterval),
 	}
-	go p.startPolling()
 	return p
 }
 
 // DeleteURLs ...
-func (p *Poll) DeleteURLs(urls []string, user string) {
-	p.input <- &task{
-		ids:  urls,
-		user: user,
+func (p *Poll) DeleteURLs(ids []string, user string) {
+	if ch, _ := p.input[user]; ch == nil {
+		p.mu.Lock()
+		p.input[user] = make(chan string)
+		p.mu.Unlock()
 	}
+
+	go func() {
+		ch := p.input[user]
+		for _, id := range ids {
+			ch <- id
+		}
+	}()
 }
 
-func (p *Poll) startPolling() {
+func (p *Poll) poll() {
 	for {
 		select {
+		case <-p.ticker.C:
+			p.flush()
 		case <-p.stop:
 			return
-		case t := <-p.input:
-			go p.deleteURLs(t)
 		}
 	}
 }
 
-func (p *Poll) deleteURLs(t *task) {
-	if err := p.store.URLsBulkDelete(t.ids, t.user); err != nil {
-		log.Printf("poll: start_polling: %v", err)
+// flush ...
+func (p *Poll) flush() {
+	for u, ch := range p.input {
+		go func(ch chan string, user string) {
+			ids := []string{}
+			for id := range ch {
+				ids = append(ids, id)
+			}
+			defer close(ch)
+			p.store.URLsBulkDelete(ids, user)
+		}(ch, u)
 	}
 }
 
+// Close ...
 func (p *Poll) Close() {
-	close(p.stop)
+	p.stop <- struct{}{}
 }
