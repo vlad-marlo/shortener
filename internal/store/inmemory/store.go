@@ -35,7 +35,10 @@ func (s *Store) GetByID(_ context.Context, id string) (u *model.URL, err error) 
 	err = nil
 	u, ok := s.urls[id]
 	if !ok {
-		err = store.ErrAlreadyExists
+		return nil, store.ErrNotFound
+	}
+	if u.IsDeleted {
+		return nil, store.ErrIsDeleted
 	}
 	return
 }
@@ -51,7 +54,9 @@ func (s *Store) Create(_ context.Context, u *model.URL) (err error) {
 		return
 	}
 	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
-		u.ShortURL()
+		if err = u.ShortURL(); err != nil {
+			return
+		}
 	}
 	s.urls[u.ID] = u
 	return
@@ -74,6 +79,15 @@ func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.UR
 
 func (s *Store) URLsBulkCreate(_ context.Context, _ []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	return nil, nil
+}
+
+func (s *Store) URLsBulkDelete(urls []string, user string) error {
+	for _, u := range urls {
+		if url := s.urls[u]; url.User == user {
+			url.IsDeleted = true
+		}
+	}
+	return nil
 }
 
 func (s *Store) Ping(_ context.Context) error {

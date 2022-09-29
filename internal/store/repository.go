@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	InMemoryStorage  string = "inmemory"
+	InMemoryStorage  string = "in-memory"
 	FileBasedStorage string = "file-based"
 	SQLStore         string = "sql-store"
 )
@@ -19,4 +19,5 @@ type Store interface {
 	GetByID(context.Context, string) (*model.URL, error)
 	GetAllUserURLs(context.Context, string) ([]*model.URL, error)
 	URLsBulkCreate(context.Context, []*model.URL) ([]*model.BatchCreateURLsResponse, error)
+	URLsBulkDelete([]string, string) error
 }

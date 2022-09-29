@@ -2,11 +2,14 @@ package httpserver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	chimiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
@@ -16,35 +19,40 @@ import (
 type Server struct {
 	chi.Router
 
-	Store  store.Store
-	Config *Config
+	store  store.Store
+	config *Config
+	poller *poll.Poll
 }
 
 // New ...
 func New(config *Config) *Server {
 	s := &Server{
-		Config: config,
+		config: config,
 		Router: chi.NewRouter(),
 	}
 	s.configureMiddlewares()
 	log.Print("middleware configured successfully")
+
 	s.configureRoutes()
 	log.Print("routes configured successfully")
 
 	return s
 }
 
-// New return new configured server with params from config object
+// Start return new configured server with params from config object
 // need for creating only one connection to db
 func Start(config *Config) error {
 	s := New(config)
 
 	if err := s.configureStore(); err != nil {
-		return err
+		return fmt.Errorf("configure store: %v", err)
 	}
 
+	s.configurePoller()
+	defer s.poller.Close()
+
 	defer func() {
-		if err := s.Store.Close(); err != nil {
+		if err := s.store.Close(); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -58,35 +66,52 @@ func (s *Server) configureRoutes() {
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
 
-	s.Post("/api/shorten", s.handleURLCreateJSON)
-	s.Get("/api/user/urls", s.handleGetUserURLs)
 	s.Get("/ping", s.handlePingStore)
-	s.Post("/api/shorten/batch", s.handleURLBulkCreate)
+
+	s.Route("/api", func(r chi.Router) {
+		r.Post("/shorten", s.handleURLCreateJSON)
+		r.Post("/shorten/batch", s.handleURLBulkCreate)
+
+		r.Route("/user/urls", func(rc chi.Router) {
+			rc.Get("/", s.handleGetUserURLs)
+			rc.Delete("/", s.handleURLBulkDelete)
+		})
+	})
 }
 
 // configureMiddlewares ...
 func (s *Server) configureMiddlewares() {
-	s.Use(middleware.GzipCompression)
-	s.Use(middleware.AuthMiddleware)
-	s.Use(middleware.LogResponse)
+	s.Use(
+		// my own middlewares
+		middleware.GzipCompression,
+		middleware.AuthMiddleware,
+
+		// chi middlewares
+		chimiddlewares.Logger,
+	)
 }
 
 // configureStore ...
 func (s *Server) configureStore() (err error) {
-	switch s.Config.StorageType {
+	switch s.config.StorageType {
 	case store.InMemoryStorage:
-		s.Store, err = inmemory.New(), nil
+		s.store, err = inmemory.New(), nil
 	case store.FileBasedStorage:
-		s.Store, err = filebased.New(s.Config.FilePath)
+		s.store, err = filebased.New(s.config.FilePath)
 	case store.SQLStore:
-		s.Store, err = sqlstore.New(context.Background(), s.Config.Database)
+		s.store, err = sqlstore.New(context.Background(), s.config.Database)
 	default:
-		s.Store, err = filebased.New(s.Config.FilePath)
+		s.store, err = filebased.New(s.config.FilePath)
 	}
 	return
 }
 
+// configurePoller ...
+func (s *Server) configurePoller() {
+	s.poller = poll.New(s.store)
+}
+
 // ListenAndServe ...
 func (s *Server) ListenAndServe() error {
-	return http.ListenAndServe(s.Config.BindAddr, s.Router)
+	return http.ListenAndServe(s.config.BindAddr, s.Router)
 }
