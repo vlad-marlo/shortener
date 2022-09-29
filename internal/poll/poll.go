@@ -45,10 +45,14 @@ func (p *Poll) startPolling() {
 		case <-p.stop:
 			return
 		case t := <-p.input:
-			if err := p.store.URLsBulkDelete(t.ids, t.user); err != nil {
-				log.Printf("poll: start_polling: %v", err)
-			}
+			go p.deleteURLs(t)
 		}
+	}
+}
+
+func (p *Poll) deleteURLs(t *task) {
+	if err := p.store.URLsBulkDelete(t.ids, t.user); err != nil {
+		log.Printf("poll: start_polling: %v", err)
 	}
 }
 
