@@ -1,6 +1,7 @@
 package poll
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -51,7 +52,7 @@ func (p *Poll) poll() {
 	for {
 		select {
 		case <-p.ticker.C:
-			p.flush()
+			go p.flush()
 		case <-p.stop:
 			return
 		}
@@ -62,12 +63,14 @@ func (p *Poll) poll() {
 func (p *Poll) flush() {
 	for u, ch := range p.input {
 		go func(ch chan string, user string) {
-			ids := []string{}
+			var ids []string
 			for id := range ch {
 				ids = append(ids, id)
 			}
 			defer close(ch)
-			p.store.URLsBulkDelete(ids, user)
+			if err := p.store.URLsBulkDelete(ids, user); err != nil {
+				log.Printf("urls bulk delete err: %v", err)
+			}
 		}(ch, u)
 	}
 }
