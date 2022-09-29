@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	PollInterval = 75 * time.Millisecond
+	Interval = 75 * time.Millisecond
 )
 
 type (
@@ -27,14 +27,14 @@ func New(store store.Store) *Poll {
 	p := &Poll{
 		store:  store,
 		stop:   make(chan struct{}),
-		ticker: time.NewTicker(PollInterval),
+		ticker: time.NewTicker(Interval),
 	}
 	return p
 }
 
 // DeleteURLs ...
 func (p *Poll) DeleteURLs(ids []string, user string) {
-	if ch, _ := p.input[user]; ch == nil {
+	if _, ok := p.input[user]; !ok {
 		p.mu.Lock()
 		p.input[user] = make(chan string)
 		p.mu.Unlock()
