@@ -35,9 +35,7 @@ func New(store store.Store) *Poll {
 // DeleteURLs ...
 func (p *Poll) DeleteURLs(ids []string, user string) {
 	if _, ok := p.input[user]; !ok {
-		p.mu.Lock()
 		p.input[user] = make(chan string)
-		p.mu.Unlock()
 	}
 
 	go func() {
