@@ -62,12 +62,11 @@ func (p *Poll) poll() {
 func (p *Poll) flush() {
 	for u, ch := range p.input {
 		go func(ch chan string, user string) {
-			close(ch)
 			var ids []string
+			defer close(ch)
 			for id := range ch {
 				ids = append(ids, id)
 			}
-			defer close(ch)
 			if err := p.store.URLsBulkDelete(ids, user); err != nil {
 				log.Printf("urls bulk delete err: %v", err)
 			}
