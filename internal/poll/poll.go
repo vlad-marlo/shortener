@@ -61,6 +61,7 @@ func (p *Poll) poll() {
 func (p *Poll) flush() {
 	for u, ch := range p.input {
 		go func(ch chan string, user string) {
+			close(ch)
 			var ids []string
 			for id := range ch {
 				ids = append(ids, id)
