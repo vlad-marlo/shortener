@@ -29,6 +29,7 @@ func New(store store.Store) *Poll {
 		stop:   make(chan struct{}),
 		ticker: time.NewTicker(Interval),
 	}
+	go p.poll()
 	return p
 }
 
