@@ -3,6 +3,7 @@ package sqlstore
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgerrcode"
@@ -42,7 +43,8 @@ func (s *SQLStore) migrate(ctx context.Context) error {
 			id SERIAL UNIQUE PRIMARY KEY NOT NULL,
 			short VARCHAR,
 			original_url VARCHAR UNIQUE,
-			created_by VARCHAR
+			created_by VARCHAR,
+			is_deleted BOOL DEFAULT FALSE
 		);`,
 	)
 	return err
@@ -58,7 +60,6 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 		u.User,
 	)
 
-	log.Print(err)
 	if err != nil {
 		pgErr := err.(*pq.Error)
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -76,42 +77,50 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 	if err := s.DB.QueryRowContext(
 		ctx,
-		`SELECT short FROM urls WHERE original_url = $1;`,
+		`SELECT short, is_deleted FROM urls WHERE original_url = $1;`,
 		u.BaseURL,
-	).Scan(&u.ID); err != nil {
+	).Scan(&u.ID, &u.IsDeleted); err != nil {
 		return err
+	}
+	if u.IsDeleted {
+		return store.ErrIsDeleted
 	}
 	return nil
 }
 
 // GetByID ...
 func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
-
 	u := &model.URL{}
+
 	if err := s.DB.QueryRowContext(
 		ctx,
-		`SELECT short, original_url, created_by FROM urls WHERE short=$1;`,
+		`SELECT short, original_url, created_by, is_deleted FROM urls WHERE short=$1;`,
 		id,
 	).Scan(
 		&u.ID,
 		&u.BaseURL,
 		&u.User,
+		&u.IsDeleted,
 	); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, store.ErrNotFound
 		}
 		return nil, err
 	}
+
+	if u.IsDeleted {
+		return nil, store.ErrIsDeleted
+	}
 	return u, nil
 }
 
 // GetAllUserURLs ...
 func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.URL, error) {
-	urls := []*model.URL{}
+	var urls []*model.URL
 
 	r, err := s.DB.QueryContext(
 		ctx,
-		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1`,
+		`SELECT short, original_url, created_by FROM urls WHERE created_by=$1 AND is_deleted = false;`,
 		userID,
 	)
 	if err != nil {
@@ -123,7 +132,11 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	if err := r.Err(); err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func(r *sql.Rows) {
+		if err := r.Close(); err != nil {
+			log.Printf("closing rows: %v", err)
+		}
+	}(r)
 
 	for r.Next() {
 		u := new(model.URL)
@@ -142,7 +155,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		return nil, store.ErrNoContent
 	}
 
-	response := []*model.BatchCreateURLsResponse{}
+	var response []*model.BatchCreateURLsResponse
 
 	// start transaction
 	tx, err := s.DB.Begin()
@@ -150,10 +163,10 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		return nil, err
 	}
 
-	// rollback if somethink went wrong
+	// rollback if something went wrong
 	defer func() {
 		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Fatalf("update drivers: unable to rollback: %v", err)
+			log.Printf("update drivers: unable to rollback: %v", err)
 		}
 	}()
 
@@ -164,7 +177,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	defer func() {
 		if err := stmt.Close(); err != nil && err != sql.ErrTxDone {
-			log.Fatalf("update drivers: unable to close stmt: %v", err)
+			log.Printf("update drivers: unable to close stmt: %v", err)
 		}
 	}()
 
@@ -191,11 +204,24 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		)
 	}
 	if err := tx.Commit(); err != nil {
-		log.Fatalf("update drivers: unable to commit: %v", err)
+		log.Printf("update drivers: unable to commit: %v", err)
 		return nil, err
 	}
 
 	return response, err
+}
+
+// URLsBulkDelete ...
+func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
+	ids := pq.Array(urls)
+	if _, err := s.DB.Exec(
+		"UPDATE urls SET is_deleted=true WHERE created_by=$1 AND short = ANY($2);",
+		user,
+		ids,
+	); err != nil {
+		return fmt.Errorf("urls bulk delete: %v", err)
+	}
+	return nil
 }
 
 // Ping ...
@@ -204,6 +230,6 @@ func (s *SQLStore) Ping(ctx context.Context) error {
 }
 
 // Close ...
-func (s *SQLStore) Close(ctx context.Context) error {
+func (s *SQLStore) Close() error {
 	return s.DB.Close()
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// testRequest ...
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, []byte) {
 	req, err := http.NewRequest(method, ts.URL+path, body)
 	require.NoError(t, err)
@@ -28,6 +29,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	return resp, respBody
 }
 
+// TestServer_HandleURLGetAndCreate ...
 func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	type args struct {
 		urlPath    string
@@ -48,7 +50,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			name: "positive case #1",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "google.com",
+				urlToShort: "https://google.com",
 			},
 			want: want{
 				wantInternalServerError: false,
@@ -59,7 +61,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			name: "positive case #2",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "ya.ru",
+				urlToShort: "https://ya.ru",
 			},
 			want: want{
 				wantInternalServerError: false,
@@ -70,7 +72,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			name: "incorrect target case",
 			args: args{
 				urlPath:    "/jkljk/",
-				urlToShort: "yandex.ru",
+				urlToShort: "https://yandex.ru",
 			},
 			want: want{
 				wantInternalServerError: true,
@@ -81,7 +83,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			name: "uncorrect url to short",
 			args: args{
 				urlPath:    "/",
-				urlToShort: "hlt v.org",
+				urlToShort: "https://hl tv.org",
 			},
 			want: want{
 				wantInternalServerError: true,
@@ -106,7 +108,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	})
-	require.NoError(t, s.configureStore())
+	_ = s.configureStore()
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -132,7 +134,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
 			defer require.NoError(t, res.Body.Close())
 
-			require.Contains(t, res.Request.URL.String(), tt.args.urlToShort)
+			require.Contains(t, res.Request.URL.String(), strings.TrimPrefix("https://", tt.args.urlToShort))
 		})
 	}
 
@@ -175,7 +177,6 @@ func TestServer_HandleURLGet(t *testing.T) {
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
-		FilePath:    "test.json",
 		StorageType: store.InMemoryStorage,
 	})
 	require.NoError(t, s.configureStore())
@@ -192,6 +193,7 @@ func TestServer_HandleURLGet(t *testing.T) {
 	}
 }
 
+// TestServer_HandleURLGetAndCreateJSON ...
 func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 	type (
 		request struct {
@@ -246,7 +248,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			args: args{
 				urlPath: "/api/shorten",
 				request: request{
-					URL: "hlt v.org",
+					URL: "https://hlt v.org",
 				},
 			},
 			want: want{
@@ -274,7 +276,9 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	})
-	require.NoError(t, s.configureStore())
+	if err := s.configureStore(); err != nil {
+		t.Log(err)
+	}
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
