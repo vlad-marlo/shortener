@@ -3,6 +3,7 @@ package httpserver
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -107,8 +108,8 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	})
-	_ = s.configureStore()
+	}, logrus.New())
+	_ = s.configureStore(logrus.New())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -178,8 +179,8 @@ func TestServer_HandleURLGet(t *testing.T) {
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	})
-	require.NoError(t, s.configureStore())
+	}, logrus.New())
+	require.NoError(t, s.configureStore(logrus.New()))
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -275,8 +276,8 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	})
-	if err := s.configureStore(); err != nil {
+	}, logrus.New())
+	if err := s.configureStore(logrus.New()); err != nil {
 		t.Log(err)
 	}
 
@@ -297,7 +298,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 				body,
 			)
 			defer require.NoError(t, res.Body.Close())
-			json.Unmarshal(url, &resp)
+			_ = json.Unmarshal(url, &resp)
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {

@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 
@@ -22,13 +23,15 @@ type Server struct {
 	store  store.Store
 	config *Config
 	poller *poll.Poll
+	logger *logrus.Logger
 }
 
 // New ...
-func New(config *Config) *Server {
+func New(config *Config, l *logrus.Logger) *Server {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),
+		logger: l,
 	}
 	s.configureMiddlewares()
 	log.Print("middleware configured successfully")
@@ -41,10 +44,10 @@ func New(config *Config) *Server {
 
 // Start return new configured server with params from config object
 // need for creating only one connection to db
-func Start(config *Config) error {
-	s := New(config)
+func Start(config *Config, l, sl *logrus.Logger) error {
+	s := New(config, l)
 
-	if err := s.configureStore(); err != nil {
+	if err := s.configureStore(sl); err != nil {
 		return fmt.Errorf("configure store: %v", err)
 	}
 
@@ -82,24 +85,25 @@ func (s *Server) configureRoutes() {
 // configureMiddlewares ...
 func (s *Server) configureMiddlewares() {
 	s.Use(
+		chimiddlewares.RequestID,
 		// my own middlewares
 		middleware.GzipCompression,
 		middleware.AuthMiddleware,
 
 		// chi middlewares
-		chimiddlewares.Logger,
+		middleware.Logger(s.logger),
 	)
 }
 
 // configureStore ...
-func (s *Server) configureStore() (err error) {
+func (s *Server) configureStore(l *logrus.Logger) (err error) {
 	switch s.config.StorageType {
 	case store.InMemoryStorage:
 		s.store, err = inmemory.New(), nil
 	case store.FileBasedStorage:
 		s.store, err = filebased.New(s.config.FilePath)
 	case store.SQLStore:
-		s.store, err = sqlstore.New(context.Background(), s.config.Database)
+		s.store, err = sqlstore.New(context.Background(), s.config.Database, l)
 	default:
 		s.store, err = filebased.New(s.config.FilePath)
 	}
