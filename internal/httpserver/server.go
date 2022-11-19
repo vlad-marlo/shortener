@@ -3,18 +3,18 @@ package httpserver
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"log"
-	"net/http"
-
 	"github.com/go-chi/chi/v5"
 	chimiddlewares "github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
+	"log"
+	"net/http"
+	"net/http/pprof"
 )
 
 type Server struct {
@@ -44,11 +44,11 @@ func New(config *Config, l *logrus.Logger) *Server {
 
 // Start return new configured server with params from config object
 // need for creating only one connection to db
-func Start(config *Config, l, sl *logrus.Logger) error {
+func Start(config *Config, l, sl *logrus.Logger) (*Server, error) {
 	s := New(config, l)
 
 	if err := s.configureStore(sl); err != nil {
-		return fmt.Errorf("configure store: %v", err)
+		return nil, fmt.Errorf("configure store: %v", err)
 	}
 
 	s.configurePoller()
@@ -56,16 +56,30 @@ func Start(config *Config, l, sl *logrus.Logger) error {
 
 	defer func() {
 		if err := s.store.Close(); err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
 	}()
-	log.Print("store configured successfully")
+	l.Info("store configured successfully")
 
-	return s.ListenAndServe()
+	return s, nil
 }
 
 // configureRoutes ...
 func (s *Server) configureRoutes() {
+	s.Route("/debug", func(r chi.Router) {
+		r.HandleFunc("/pprof/", pprof.Index)
+		r.HandleFunc("/pprof/allocs", pprof.Index)
+		r.HandleFunc("/pprof/heap", pprof.Index)
+		r.HandleFunc("/pprof/mutex", pprof.Index)
+		r.HandleFunc("/pprof/block", pprof.Index)
+		r.HandleFunc("/pprof/threadcreate", pprof.Index)
+		r.HandleFunc("/pprof/goroutine", pprof.Index)
+		r.HandleFunc("/pprof/cmdline", pprof.Cmdline)
+		r.HandleFunc("/pprof/profile", pprof.Profile)
+		r.HandleFunc("/pprof/symbol", pprof.Symbol)
+		r.HandleFunc("/pprof/trace", pprof.Trace)
+	})
+
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
 
@@ -107,6 +121,7 @@ func (s *Server) configureStore(l *logrus.Logger) (err error) {
 	default:
 		s.store, err = filebased.New(s.config.FilePath)
 	}
+	l.Trace(s.config.StorageType, s.config.Database)
 	return
 }
 

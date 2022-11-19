@@ -6,6 +6,8 @@ import (
 	"github.com/vlad-marlo/logger/hook"
 	"github.com/vlad-marlo/shortener/internal/httpserver"
 	"io"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,7 +17,7 @@ import (
 func main() {
 	serverLogger := log.WithOpts(
 		log.WithOutput(io.Discard),
-		log.WithLevel(logrus.DebugLevel),
+		log.WithLevel(logrus.TraceLevel),
 		log.WithReportCaller(true),
 		log.WithDefaultFormatter(log.JSONFormatter),
 		log.WithHook(
@@ -33,13 +35,13 @@ func main() {
 
 	storeLogger := log.WithOpts(
 		log.WithOutput(io.Discard),
-		log.WithLevel(logrus.DebugLevel),
+		log.WithLevel(logrus.TraceLevel),
 		log.WithReportCaller(true),
 		log.WithDefaultFormatter(log.JSONFormatter),
 		log.WithHook(
 			hook.New(
 				logrus.AllLevels,
-				nil,
+				[]io.Writer{os.Stdout},
 				hook.WithFileOutput(
 					"logs",
 					"server",
@@ -51,7 +53,14 @@ func main() {
 
 	config := httpserver.NewConfig()
 	go func() {
-		if err := httpserver.Start(config, serverLogger, storeLogger); err != nil {
+		s, err := httpserver.Start(config, serverLogger, storeLogger)
+		if err != nil {
+			serverLogger.WithFields(map[string]interface{}{
+				"bind_addr": config.BindAddr,
+			}).Fatal(err)
+		}
+		serverLogger.Trace("start")
+		if err := http.ListenAndServe(config.BindAddr, s.Router); err != nil {
 			serverLogger.WithFields(map[string]interface{}{
 				"bind_addr": config.BindAddr,
 			}).Fatal(err)
