@@ -11,7 +11,7 @@ require (
 	github.com/lib/pq v1.10.6
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
-	github.com/vlad-marlo/logger v0.0.0-20221119142420-30fe66d3e2e8
+	github.com/vlad-marlo/logger v0.0.0-20221119182609-9fcce49dd1b2
 )
 
 require (
