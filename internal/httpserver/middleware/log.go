@@ -11,6 +11,9 @@ type codeWriter struct {
 	http.ResponseWriter
 	code int
 }
+type Fields interface {
+	map[string]interface{} | logrus.Fields
+}
 
 func (c *codeWriter) WriteHeader(code int) {
 	c.ResponseWriter.WriteHeader(code)
@@ -30,23 +33,32 @@ func Logger(logger *logrus.Logger) func(next http.Handler) http.Handler {
 			next.ServeHTTP(rw, r)
 			dur := time.Since(start)
 
-			var lvl logrus.Level
 			switch {
 			case rw.code >= 500:
-				lvl = logrus.ErrorLevel
+				logger.WithFields(logrus.Fields{
+					"duration":   dur.String(),
+					"code":       rw.code,
+					"request_id": middleware.GetReqID(r.Context()),
+				}).Error(http.StatusText(rw.code))
 			case rw.code >= 400:
-				lvl = logrus.DebugLevel
+				logger.WithFields(logrus.Fields{
+					"duration":   dur.String(),
+					"code":       rw.code,
+					"request_id": middleware.GetReqID(r.Context()),
+				}).Debug(http.StatusText(rw.code))
 			case rw.code >= 100:
-				lvl = logrus.TraceLevel
+				logger.WithFields(logrus.Fields{
+					"duration":   dur.String(),
+					"code":       rw.code,
+					"request_id": middleware.GetReqID(r.Context()),
+				}).Trace(http.StatusText(rw.code))
 			default:
-				lvl = logrus.WarnLevel
+				logger.WithFields(logrus.Fields{
+					"duration":   dur.String(),
+					"code":       rw.code,
+					"request_id": middleware.GetReqID(r.Context()),
+				}).Warn(http.StatusText(rw.code))
 			}
-
-			logger.WithFields(map[string]interface{}{
-				"duration":   dur,
-				"code":       rw.code,
-				"request_id": middleware.GetReqID(r.Context()),
-			}).Log(lvl, http.StatusText(rw.code))
 		})
 	}
 }

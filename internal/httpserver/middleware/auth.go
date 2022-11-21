@@ -7,8 +7,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"github.com/sirupsen/logrus"
+	"github.com/vlad-marlo/logger"
+	"github.com/vlad-marlo/logger/hook"
+	"io"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -27,13 +32,35 @@ const (
 	UserIDDefaultValue                       = "default_user"
 )
 
-var encryptor *Encryptor
+var (
+	log       *logrus.Logger
+	encryptor *Encryptor
+)
+
+func init() {
+	log = logger.WithOpts(
+		logger.WithHook(
+			hook.New(
+				logrus.AllLevels,
+				[]io.Writer{os.Stdout},
+				hook.WithFileOutput(
+					"logs",
+					"encryptor",
+					time.Now().Format("2006-January-02-15"),
+				),
+			),
+		),
+		logger.WithOutput(io.Discard),
+		logger.WithReportCaller(true),
+		logger.WithDefaultFormatter(logger.JSONFormatter),
+	)
+}
 
 // generateRandom byte slice
 func generateRandom(size int) ([]byte, error) {
 	b := make([]byte, size)
 	if _, err := rand.Read(b); err != nil {
-		return nil, fmt.Errorf("rand read: %v", err)
+		return nil, fmt.Errorf("rand read: %w", err)
 	}
 	return b, nil
 }
@@ -101,7 +128,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
-			log.Printf("new encryptor: %v", err)
+			log.Errorf("new encryptor: %v", err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
@@ -109,7 +136,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
-			log.Printf("decode: %v", err)
+			log.Debugf("decode: %v", err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}

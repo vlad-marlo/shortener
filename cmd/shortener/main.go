@@ -23,7 +23,7 @@ func main() {
 		log.WithHook(
 			hook.New(
 				logrus.AllLevels,
-				nil,
+				[]io.Writer{os.Stdout},
 				hook.WithFileOutput(
 					"logs",
 					"server",
