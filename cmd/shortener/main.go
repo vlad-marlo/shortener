@@ -66,7 +66,7 @@ func main() {
 			}).Fatal(err)
 		}
 	}()
-	interrupt := make(chan os.Signal)
+	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-interrupt
 	serverLogger.WithFields(map[string]interface{}{
