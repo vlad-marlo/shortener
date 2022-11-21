@@ -67,7 +67,7 @@ func main() {
 		}
 	}()
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-interrupt
 	serverLogger.WithFields(map[string]interface{}{
 		"signal": sig.String(),
