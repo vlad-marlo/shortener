@@ -3,7 +3,9 @@ package httpserver
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/sirupsen/logrus"
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -104,12 +106,13 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		},
 	}
 
-	s := New(&Config{
+	storage := inmemory.New()
+	s, err := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, logrus.New())
-	_ = s.configureStore(logrus.New())
+	}, storage, logrus.New())
+	require.NoError(t, err, fmt.Sprintf("init server: %v", err))
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -175,12 +178,14 @@ func TestServer_HandleURLGet(t *testing.T) {
 			status: http.StatusNotFound,
 		},
 	}
-	s := New(&Config{
+
+	storage := inmemory.New()
+	s, err := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, logrus.New())
-	require.NoError(t, s.configureStore(logrus.New()))
+	}, storage, logrus.New())
+	require.NoError(t, err, "init server: %v", err)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -272,14 +277,13 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		},
 	}
 
-	s := New(&Config{
+	storage := inmemory.New()
+	s, err := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, logrus.New())
-	if err := s.configureStore(logrus.New()); err != nil {
-		t.Log(err)
-	}
+	}, storage, logrus.New())
+	require.NoErrorf(t, err, "init server: %v", err)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()

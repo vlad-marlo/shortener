@@ -1,12 +1,18 @@
 package httpserver_test
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/vlad-marlo/shortener/internal/httpserver"
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"net/http"
 )
 
-func ExampleStart() {
-	server, err := httpserver.Start(nil, nil, nil)
+func ExampleNew() {
+	// parse server config
+	config := httpserver.NewConfig()
+	// create some storage; for example inmemory
+	storage := inmemory.New()
+	server, err := httpserver.New(config, storage, logrus.New())
 	if err != nil {
 		// ...
 	}
