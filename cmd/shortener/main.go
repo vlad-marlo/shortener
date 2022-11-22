@@ -71,6 +71,9 @@ func main() {
 	default:
 		storage, err = filebased.New(config.FilePath)
 	}
+	if err != nil {
+		serverLogger.Fatalf("init storage: %v", err)
+	}
 	defer func() {
 		if err := storage.Close(); err != nil {
 			storeLogger.Fatalf("close server: %v", err)
