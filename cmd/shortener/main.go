@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
 	log "github.com/vlad-marlo/logger"
 	"github.com/vlad-marlo/logger/hook"
 	"github.com/vlad-marlo/shortener/internal/httpserver"
+	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/filebased"
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
+	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
 	"io"
 	"net/http"
 	_ "net/http/pprof"
@@ -52,20 +57,42 @@ func main() {
 	)
 
 	config := httpserver.NewConfig()
-	go func() {
-		s, err := httpserver.Start(config, serverLogger, storeLogger)
-		if err != nil {
-			serverLogger.WithFields(map[string]interface{}{
-				"bind_addr": config.BindAddr,
-			}).Fatal(err)
-		}
-		serverLogger.Trace("start")
-		if err := http.ListenAndServe(config.BindAddr, s.Router); err != nil {
-			serverLogger.WithFields(map[string]interface{}{
-				"bind_addr": config.BindAddr,
-			}).Fatal(err)
+
+	var storage store.Store
+	var err error
+
+	switch config.StorageType {
+	case store.InMemoryStorage:
+		storage, err = inmemory.New(), nil
+	case store.FileBasedStorage:
+		storage, err = filebased.New(config.FilePath)
+	case store.SQLStore:
+		storage, err = sqlstore.New(context.Background(), config.Database, storeLogger)
+	default:
+		storage, err = filebased.New(config.FilePath)
+	}
+	defer func() {
+		if err := storage.Close(); err != nil {
+			storeLogger.Fatalf("close server: %v", err)
 		}
 	}()
+
+	s, err := httpserver.New(config, storage, serverLogger)
+	if err != nil {
+		serverLogger.WithFields(map[string]interface{}{
+			"bind_addr": config.BindAddr,
+		}).Fatalf("init storage: %v", err)
+	}
+
+	go func() {
+		serverLogger.WithFields(logrus.Fields{
+			"addr": config.BindAddr,
+		}).Trace("starting http server")
+		if err := http.ListenAndServe(config.BindAddr, s.Router); err != nil {
+			serverLogger.Fatalf("listen and server server: %v", err)
+		}
+	}()
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-interrupt

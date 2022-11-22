@@ -1,18 +1,12 @@
 package httpserver
 
 import (
-	"context"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	chimiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
-	"github.com/vlad-marlo/shortener/internal/store/filebased"
-	"github.com/vlad-marlo/shortener/internal/store/inmemory"
-	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
-	"log"
 	"net/http"
 	"net/http/pprof"
 )
@@ -26,39 +20,24 @@ type Server struct {
 	logger *logrus.Logger
 }
 
-// New ...
-func New(config *Config, l *logrus.Logger) *Server {
+// New return new configured server with params from config object
+// need for creating only one connection to db
+func New(config *Config, storage store.Store, l *logrus.Logger) (*Server, error) {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
+		store:  storage,
 	}
 	s.configureMiddlewares()
-	log.Print("middleware configured successfully")
+	l.Info("middleware configured successfully")
 
 	s.configureRoutes()
-	log.Print("routes configured successfully")
-
-	return s
-}
-
-// Start return new configured server with params from config object
-// need for creating only one connection to db
-func Start(config *Config, l, sl *logrus.Logger) (*Server, error) {
-	s := New(config, l)
-
-	if err := s.configureStore(sl); err != nil {
-		return nil, fmt.Errorf("configure store: %v", err)
-	}
+	l.Info("routes configured successfully")
 
 	s.configurePoller()
 	defer s.poller.Close()
 
-	defer func() {
-		if err := s.store.Close(); err != nil {
-			l.Fatal(err)
-		}
-	}()
 	l.Info("store configured successfully")
 
 	return s, nil
@@ -107,22 +86,6 @@ func (s *Server) configureMiddlewares() {
 		// chi middlewares
 		middleware.Logger(s.logger),
 	)
-}
-
-// configureStore ...
-func (s *Server) configureStore(l *logrus.Logger) (err error) {
-	switch s.config.StorageType {
-	case store.InMemoryStorage:
-		s.store, err = inmemory.New(), nil
-	case store.FileBasedStorage:
-		s.store, err = filebased.New(s.config.FilePath)
-	case store.SQLStore:
-		s.store, err = sqlstore.New(context.Background(), s.config.Database, l)
-	default:
-		s.store, err = filebased.New(s.config.FilePath)
-	}
-	l.Trace(s.config.StorageType, s.config.Database)
-	return
 }
 
 // configurePoller ...
