@@ -3,6 +3,8 @@ package httpserver
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/sirupsen/logrus"
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -103,12 +105,12 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		},
 	}
 
+	storage := inmemory.New()
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	})
-	_ = s.configureStore()
+	}, storage, logrus.New())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -174,12 +176,13 @@ func TestServer_HandleURLGet(t *testing.T) {
 			status: http.StatusNotFound,
 		},
 	}
+
+	storage := inmemory.New()
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	})
-	require.NoError(t, s.configureStore())
+	}, storage, logrus.New())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -271,14 +274,12 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		},
 	}
 
+	storage := inmemory.New()
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	})
-	if err := s.configureStore(); err != nil {
-		t.Log(err)
-	}
+	}, storage, logrus.New())
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -297,7 +298,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 				body,
 			)
 			defer require.NoError(t, res.Body.Close())
-			json.Unmarshal(url, &resp)
+			_ = json.Unmarshal(url, &resp)
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {

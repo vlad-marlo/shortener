@@ -2,6 +2,7 @@ package inmemory
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 
@@ -51,11 +52,11 @@ func (s *Store) Create(_ context.Context, u *model.URL) (err error) {
 	}
 
 	if err = u.Validate(); err != nil {
-		return
+		return fmt.Errorf("validate url: %w", err)
 	}
 	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
 		if err = u.ShortURL(); err != nil {
-			return
+			return fmt.Errorf("short url: %w", err)
 		}
 	}
 	s.urls[u.ID] = u
