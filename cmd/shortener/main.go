@@ -74,23 +74,20 @@ func main() {
 	if err != nil {
 		serverLogger.Fatalf("init storage: %v", err)
 	}
+
 	defer func() {
 		if err := storage.Close(); err != nil {
 			storeLogger.Fatalf("close server: %v", err)
 		}
 	}()
 
-	s, err := httpserver.New(config, storage, serverLogger)
-	if err != nil {
-		serverLogger.WithFields(map[string]interface{}{
-			"bind_addr": config.BindAddr,
-		}).Fatalf("init storage: %v", err)
-	}
+	s := httpserver.New(config, storage, serverLogger)
+	defer s.Close()
+	serverLogger.WithFields(map[string]interface{}{
+		"bind_addr": config.BindAddr,
+	}).Info("successfully init server")
 
 	go func() {
-		serverLogger.WithFields(logrus.Fields{
-			"addr": config.BindAddr,
-		}).Trace("starting http server")
 		if err := http.ListenAndServe(config.BindAddr, s.Router); err != nil {
 			serverLogger.Fatalf("listen and server server: %v", err)
 		}

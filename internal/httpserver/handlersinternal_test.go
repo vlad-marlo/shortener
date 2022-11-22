@@ -3,7 +3,6 @@ package httpserver
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"io"
@@ -107,12 +106,11 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	}
 
 	storage := inmemory.New()
-	s, err := New(&Config{
+	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	}, storage, logrus.New())
-	require.NoError(t, err, fmt.Sprintf("init server: %v", err))
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -180,12 +178,11 @@ func TestServer_HandleURLGet(t *testing.T) {
 	}
 
 	storage := inmemory.New()
-	s, err := New(&Config{
+	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	}, storage, logrus.New())
-	require.NoError(t, err, "init server: %v", err)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -278,12 +275,11 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 	}
 
 	storage := inmemory.New()
-	s, err := New(&Config{
+	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
 	}, storage, logrus.New())
-	require.NoErrorf(t, err, "init server: %v", err)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()

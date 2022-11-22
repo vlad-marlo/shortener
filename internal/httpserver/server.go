@@ -22,7 +22,7 @@ type Server struct {
 
 // New return new configured server with params from config object
 // need for creating only one connection to db
-func New(config *Config, storage store.Store, l *logrus.Logger) (*Server, error) {
+func New(config *Config, storage store.Store, l *logrus.Logger) *Server {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),
@@ -36,11 +36,14 @@ func New(config *Config, storage store.Store, l *logrus.Logger) (*Server, error)
 	l.Info("routes configured successfully")
 
 	s.configurePoller()
-	defer s.poller.Close()
 
 	l.Info("store configured successfully")
 
-	return s, nil
+	return s
+}
+
+func (s *Server) Close() {
+	s.poller.Close()
 }
 
 // configureRoutes ...

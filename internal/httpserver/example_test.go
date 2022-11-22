@@ -12,10 +12,16 @@ func ExampleNew() {
 	config := httpserver.NewConfig()
 	// create some storage; for example inmemory
 	storage := inmemory.New()
-	server, err := httpserver.New(config, storage, logrus.New())
-	if err != nil {
-		// ...
-	}
+	defer func() {
+		// always close storage
+		if err := storage.Close(); err != nil {
+			// ...
+		}
+	}()
+	server := httpserver.New(config, storage, logrus.New())
+	// always close server
+	defer server.Close()
+
 	go func() {
 		// start your http server
 		_ = http.ListenAndServe("localhost:8080", server.Router)
