@@ -22,7 +22,8 @@ const (
 	cancelCoolDown = 30 * time.Millisecond
 )
 
-// handleURLGet is redirecting user to base address if it exists in storage
+// handleURLGet is redirecting user to base url with id which is provided in
+// url path by chi url params.
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	reqID := middleware.GetReqID(ctx)
@@ -50,7 +51,10 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// handleURLCreate ...
+// handleURLCreate is http handler which creates record about url and return
+// short link to url in response.
+//
+// If url was already registered when handler will return old value.
 func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	// setting up response meta info
 	fields := map[string]interface{}{
@@ -106,7 +110,10 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
 }
 
-// handleURLCreateJSON ...
+// handleURLCreateJSON is http handler which creates record about url and return
+// short link to url in response.
+//
+// If url was already registered when handler will return old value.
 func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
@@ -159,7 +166,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
 }
 
-// handleGetUserURLs ...
+// handleGetUserURLs is http handler which return to user all records which was created by him.
 func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
@@ -198,7 +205,9 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
 }
 
-// handlePingStore ...
+// handlePingStore is debug handler which gives user access to check db connection.
+//
+// In order that storage is not availible, handler will return http status 500. In other cases 200.
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
@@ -213,7 +222,12 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleURLBulkCreate ...
+// handleURLBulkCreate is http handler to create many records about many urls in one time.
+//
+// User gives him json object like
+// [{ "correlation_id": "1", "original_url": "https://ya.ru" }]
+// after creation in success case response will be like
+// [{ "correlation_id": "1", "short_url": "http://<server_addr>/<id>"}].
 func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
@@ -269,7 +283,11 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleURLBulkDelete ...
+// handleURLBulkDelete is http handler which gives user access to delete all urls
+// which was created by him.
+//
+// Request must be json array of strings where every element is url id.
+// Only user which create url have access to deliting urls.
 func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
