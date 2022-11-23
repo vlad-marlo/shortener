@@ -22,7 +22,7 @@ const (
 	cancelCoolDown = 30 * time.Millisecond
 )
 
-// handleURLGet ...
+// handleURLGet is redirecting user to base address if it exists in storage
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	reqID := middleware.GetReqID(ctx)
