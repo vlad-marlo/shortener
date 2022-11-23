@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
 )
 
 type codeWriter struct {

@@ -1,10 +1,12 @@
 package httpserver_test
 
 import (
+	"net/http"
+
 	"github.com/sirupsen/logrus"
+
 	"github.com/vlad-marlo/shortener/internal/httpserver"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
-	"net/http"
 )
 
 func ExampleNew() {

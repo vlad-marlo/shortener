@@ -7,13 +7,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/vlad-marlo/logger"
-	"github.com/vlad-marlo/logger/hook"
 	"io"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/vlad-marlo/logger"
+	"github.com/vlad-marlo/logger/hook"
 
 	"github.com/google/uuid"
 )

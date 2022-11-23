@@ -2,6 +2,14 @@ package main
 
 import (
 	"context"
+	"io"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/sirupsen/logrus"
 	log "github.com/vlad-marlo/logger"
 	"github.com/vlad-marlo/logger/hook"
@@ -10,13 +18,6 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
-	"io"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 func main() {

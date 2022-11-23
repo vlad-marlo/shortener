@@ -121,8 +121,6 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
-github.com/vlad-marlo/logger v0.0.0-20221119142420-30fe66d3e2e8 h1:Qb+DqxaYbW1TF7EzVhAI1hIg8PvDDeE2HrBuYIHgZxI=
-github.com/vlad-marlo/logger v0.0.0-20221119142420-30fe66d3e2e8/go.mod h1:BcLjWOgM98CuiR7MBjfse95S/hLmAnYumZoKyw3rvLk=
 github.com/vlad-marlo/logger v0.0.0-20221119182609-9fcce49dd1b2 h1:AeHUGkjqhNhMU7pZoqaShg/CGb3I+I8bcpn4ifKYLgc=
 github.com/vlad-marlo/logger v0.0.0-20221119182609-9fcce49dd1b2/go.mod h1:BcLjWOgM98CuiR7MBjfse95S/hLmAnYumZoKyw3rvLk=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=

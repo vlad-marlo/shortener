@@ -2,8 +2,9 @@ package httpserver
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 )

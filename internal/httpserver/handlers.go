@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/go-chi/chi/v5"
+
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
