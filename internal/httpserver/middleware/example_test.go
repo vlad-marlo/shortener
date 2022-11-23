@@ -1,9 +1,11 @@
 package middleware_test
 
 import (
-	"github.com/sirupsen/logrus"
-	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 )
 
 func ExampleLogger() {

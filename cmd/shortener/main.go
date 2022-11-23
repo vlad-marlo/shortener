@@ -2,14 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
-	log "github.com/vlad-marlo/logger"
-	"github.com/vlad-marlo/logger/hook"
-	"github.com/vlad-marlo/shortener/internal/httpserver"
-	"github.com/vlad-marlo/shortener/internal/store"
-	"github.com/vlad-marlo/shortener/internal/store/filebased"
-	"github.com/vlad-marlo/shortener/internal/store/inmemory"
-	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
 	"io"
 	"net/http"
 	_ "net/http/pprof"
@@ -17,6 +9,16 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	log "github.com/vlad-marlo/logger"
+	"github.com/vlad-marlo/logger/hook"
+
+	"github.com/vlad-marlo/shortener/internal/httpserver"
+	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/filebased"
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
+	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
 )
 
 func main() {

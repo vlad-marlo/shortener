@@ -3,17 +3,20 @@ package httpserver
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
-	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
