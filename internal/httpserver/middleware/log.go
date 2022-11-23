@@ -12,6 +12,7 @@ type codeWriter struct {
 	http.ResponseWriter
 	code int
 }
+
 type Fields interface {
 	map[string]interface{} | logrus.Fields
 }
