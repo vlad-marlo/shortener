@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"io"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -13,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/vlad-marlo/logger"
 	"github.com/vlad-marlo/logger/hook"
+
+	_ "github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver"
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -51,7 +52,7 @@ func main() {
 				[]io.Writer{os.Stdout},
 				hook.WithFileOutput(
 					"logs",
-					"server",
+					"storage",
 					time.Now().Format("2006-January-02-15"),
 				),
 			),
@@ -90,9 +91,8 @@ func main() {
 	}).Info("successfully init server")
 
 	go func() {
-		if err := http.ListenAndServe(config.BindAddr, s.Router); err != nil {
-			serverLogger.Fatalf("listen and server server: %v", err)
-		}
+		// logging fatal because listen and server always return not-nil error
+		serverLogger.Fatalf("listen and server server: %v", s.ListenAndServe())
 	}()
 
 	interrupt := make(chan os.Signal, 1)

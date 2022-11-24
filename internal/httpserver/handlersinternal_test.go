@@ -318,3 +318,52 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkServer_handleURLGet(b *testing.B) {
+	storage := inmemory.New()
+	s := New(&Config{
+		BaseURL:     "http://localhost:8080",
+		BindAddr:    "localhost:8080",
+		StorageType: store.InMemoryStorage,
+	}, storage, logrus.New())
+
+	ts := httptest.NewServer(s.Router)
+	defer ts.Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/sdfasd", nil)
+		if err != nil {
+			b.Fatalf("new request: %v", err)
+		}
+		b.StartTimer()
+
+		if _, err := http.DefaultClient.Do(req); err != nil {
+			b.Fatalf("doing http request")
+		}
+	}
+}
+
+func BenchmarkServer_handleURLCreate(b *testing.B) {
+	storage := inmemory.New()
+	s := New(&Config{
+		BaseURL:     "http://localhost:8080",
+		BindAddr:    "localhost:8080",
+		StorageType: store.InMemoryStorage,
+	}, storage, logrus.New())
+
+	ts := httptest.NewServer(s.Router)
+	defer ts.Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req, err := http.NewRequest(http.MethodPost, ts.URL+"/", strings.NewReader(`https://ya.ru`))
+		if err != nil {
+			b.Fatalf("new request: %v", err)
+		}
+		if _, err := http.DefaultClient.Do(req); err != nil {
+			b.Fatalf("doing http request: %v", err)
+		}
+	}
+}
