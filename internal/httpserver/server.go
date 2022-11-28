@@ -1,19 +1,16 @@
 package httpserver
 
 import (
-	"context"
-	"fmt"
-	"log"
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/go-chi/chi/v5"
 	chimiddlewares "github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
+
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
-	"github.com/vlad-marlo/shortener/internal/store/filebased"
-	"github.com/vlad-marlo/shortener/internal/store/inmemory"
-	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
 )
 
 type Server struct {
@@ -22,47 +19,51 @@ type Server struct {
 	store  store.Store
 	config *Config
 	poller *poll.Poll
+	logger *logrus.Logger
 }
 
-// New ...
-func New(config *Config) *Server {
+// New return new configured server with params from config object
+// need for creating only one connection to db
+func New(config *Config, storage store.Store, l *logrus.Logger) *Server {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),
+		logger: l,
+		store:  storage,
 	}
 	s.configureMiddlewares()
-	log.Print("middleware configured successfully")
+	l.Info("middleware configured successfully")
 
 	s.configureRoutes()
-	log.Print("routes configured successfully")
+	l.Info("routes configured successfully")
+
+	s.configurePoller()
+
+	l.Info("store configured successfully")
 
 	return s
 }
 
-// Start return new configured server with params from config object
-// need for creating only one connection to db
-func Start(config *Config) error {
-	s := New(config)
-
-	if err := s.configureStore(); err != nil {
-		return fmt.Errorf("configure store: %v", err)
-	}
-
-	s.configurePoller()
-	defer s.poller.Close()
-
-	defer func() {
-		if err := s.store.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	log.Print("store configured successfully")
-
-	return s.ListenAndServe()
+func (s *Server) Close() {
+	s.poller.Close()
 }
 
-// configureRoutes ...
+// configureRoutes initialize all endpoints of server
 func (s *Server) configureRoutes() {
+	s.Route("/debug", func(r chi.Router) {
+		r.HandleFunc("/pprof/", pprof.Index)
+		r.HandleFunc("/pprof/allocs", pprof.Index)
+		r.HandleFunc("/pprof/heap", pprof.Index)
+		r.HandleFunc("/pprof/mutex", pprof.Index)
+		r.HandleFunc("/pprof/block", pprof.Index)
+		r.HandleFunc("/pprof/threadcreate", pprof.Index)
+		r.HandleFunc("/pprof/goroutine", pprof.Index)
+		r.HandleFunc("/pprof/cmdline", pprof.Cmdline)
+		r.HandleFunc("/pprof/profile", pprof.Profile)
+		r.HandleFunc("/pprof/symbol", pprof.Symbol)
+		r.HandleFunc("/pprof/trace", pprof.Trace)
+	})
+
 	s.Post("/", s.handleURLCreate)
 	s.Get("/{id}", s.handleURLGet)
 
@@ -79,39 +80,25 @@ func (s *Server) configureRoutes() {
 	})
 }
 
-// configureMiddlewares ...
+// configureMiddlewares is adding middlewares to server
 func (s *Server) configureMiddlewares() {
 	s.Use(
+		chimiddlewares.RequestID,
 		// my own middlewares
 		middleware.GzipCompression,
 		middleware.AuthMiddleware,
 
 		// chi middlewares
-		chimiddlewares.Logger,
+		middleware.Logger(s.logger),
 	)
 }
 
-// configureStore ...
-func (s *Server) configureStore() (err error) {
-	switch s.config.StorageType {
-	case store.InMemoryStorage:
-		s.store, err = inmemory.New(), nil
-	case store.FileBasedStorage:
-		s.store, err = filebased.New(s.config.FilePath)
-	case store.SQLStore:
-		s.store, err = sqlstore.New(context.Background(), s.config.Database)
-	default:
-		s.store, err = filebased.New(s.config.FilePath)
-	}
-	return
-}
-
-// configurePoller ...
+// configurePoller creates new poller
 func (s *Server) configurePoller() {
 	s.poller = poll.New(s.store)
 }
 
-// ListenAndServe ...
+// ListenAndServe is starting http server on correct address
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.config.BindAddr, s.Router)
 }

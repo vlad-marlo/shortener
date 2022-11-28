@@ -7,8 +7,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"io"
 	"net/http"
+	"os"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/vlad-marlo/logger"
+	"github.com/vlad-marlo/logger/hook"
 
 	"github.com/google/uuid"
 )
@@ -27,13 +33,36 @@ const (
 	UserIDDefaultValue                       = "default_user"
 )
 
-var encryptor *Encryptor
+var (
+	log       *logrus.Logger
+	encryptor *Encryptor
+)
+
+func init() {
+	log = logger.WithOpts(
+		logger.WithHook(
+			hook.New(
+				logrus.AllLevels,
+				[]io.Writer{os.Stdout},
+				hook.WithFileOutput(
+					"logs",
+					"encryptor",
+					time.Now().Format("2006-January-02-15"),
+				),
+			),
+		),
+		logger.WithOutput(io.Discard),
+		logger.WithLevel(logrus.TraceLevel),
+		logger.WithReportCaller(true),
+		logger.WithDefaultFormatter(logger.JSONFormatter),
+	)
+}
 
 // generateRandom byte slice
 func generateRandom(size int) ([]byte, error) {
 	b := make([]byte, size)
 	if _, err := rand.Read(b); err != nil {
-		return nil, fmt.Errorf("rand read: %v", err)
+		return nil, fmt.Errorf("rand read: %w", err)
 	}
 	return b, nil
 }
@@ -46,22 +75,22 @@ func NewEncryptor() error {
 
 	key, err := generateRandom(aes.BlockSize)
 	if err != nil {
-		return fmt.Errorf("generate key: %v", err)
+		return fmt.Errorf("generate key: %w", err)
 	}
 
 	aesBlock, err := aes.NewCipher(key)
 	if err != nil {
-		return fmt.Errorf("initialize cipher: %v", err)
+		return fmt.Errorf("initialize cipher: %w", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(aesBlock)
 	if err != nil {
-		return fmt.Errorf("initialize GCM encryptor: %v", err)
+		return fmt.Errorf("initialize GCM encryptor: %w", err)
 	}
 
 	nonce, err := generateRandom(aesGCM.NonceSize())
 	if err != nil {
-		return fmt.Errorf("initialize GCM nonce: %v", err)
+		return fmt.Errorf("initialize GCM nonce: %w", err)
 	}
 
 	encryptor = &Encryptor{
@@ -101,7 +130,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var rawUserID string
 
 		if err := NewEncryptor(); err != nil {
-			log.Printf("new encryptor: %v", err)
+			log.Errorf("new encryptor: %v", err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}
@@ -109,7 +138,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if user, err := r.Cookie(UserIDCookieName); err != nil {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.DecodeUUID(user.Value, &rawUserID); err != nil {
-			log.Printf("decode: %v", err)
+			log.Debugf("decode: %v", err)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCTXName, UserIDDefaultValue)))
 			return
 		}

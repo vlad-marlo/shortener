@@ -2,7 +2,7 @@ package inmemory
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -18,7 +18,6 @@ type Store struct {
 
 // New ...
 func New() *Store {
-	log.Print("successfully configured inmemory storage")
 	return &Store{
 		urls:            make(map[string]*model.URL),
 		useMutexLocking: true,
@@ -51,11 +50,11 @@ func (s *Store) Create(_ context.Context, u *model.URL) (err error) {
 	}
 
 	if err = u.Validate(); err != nil {
-		return
+		return fmt.Errorf("validate url: %w", err)
 	}
 	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
 		if err = u.ShortURL(); err != nil {
-			return
+			return fmt.Errorf("short url: %w", err)
 		}
 	}
 	s.urls[u.ID] = u

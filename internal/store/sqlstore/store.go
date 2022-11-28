@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -16,22 +16,25 @@ import (
 
 type SQLStore struct {
 	DB *sql.DB
+	l  *logrus.Logger
 }
 
 // New ...
-func New(ctx context.Context, connectString string) (*SQLStore, error) {
+func New(ctx context.Context, connectString string, l *logrus.Logger) (*SQLStore, error) {
 	db, err := sql.Open("postgres", connectString)
 	if err != nil {
 		return nil, err
 	}
-	s := &SQLStore{DB: db}
-
-	if err := s.migrate(ctx); err != nil {
-		log.Print(err)
-		return nil, err
+	s := &SQLStore{
+		DB: db,
+		l:  l,
 	}
 
-	log.Print("successfully created migrations")
+	if err := s.migrate(ctx); err != nil {
+		return nil, fmt.Errorf("migrate store: %w", err)
+	}
+
+	s.l.Info("successfully created migrations")
 	return s, nil
 }
 
@@ -61,8 +64,8 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 	)
 
 	if err != nil {
-		pgErr := err.(*pq.Error)
-		if pgErr.Code == pgerrcode.UniqueViolation {
+		pgErr, ok := err.(*pq.Error)
+		if ok && pgErr.Code == pgerrcode.UniqueViolation {
 			if err := s.GetByOriginalURL(ctx, u); err != nil {
 				return err
 			}
@@ -124,17 +127,14 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 		userID,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return urls, nil
-		}
-		return nil, err
+		return nil, fmt.Errorf("query db: %w", err)
 	}
 	if err := r.Err(); err != nil {
 		return nil, err
 	}
 	defer func(r *sql.Rows) {
 		if err := r.Close(); err != nil {
-			log.Printf("closing rows: %v", err)
+			s.l.Warnf("closing rows: %v", err)
 		}
 	}(r)
 
@@ -144,6 +144,9 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 			return nil, err
 		}
 		urls = append(urls, u)
+	}
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	return urls, nil
@@ -166,7 +169,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	// rollback if something went wrong
 	defer func() {
 		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("update drivers: unable to rollback: %v", err)
+			s.l.Errorf("update drivers: unable to rollback: %v", err)
 		}
 	}()
 
@@ -177,7 +180,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	defer func() {
 		if err := stmt.Close(); err != nil && err != sql.ErrTxDone {
-			log.Printf("update drivers: unable to close stmt: %v", err)
+			s.l.Errorf("update drivers: unable to close stmt: %v", err)
 		}
 	}()
 
@@ -204,7 +207,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		)
 	}
 	if err := tx.Commit(); err != nil {
-		log.Printf("update drivers: unable to commit: %v", err)
+		s.l.Errorf("update drivers: unable to commit: %v", err)
 		return nil, err
 	}
 
@@ -219,7 +222,7 @@ func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 		user,
 		ids,
 	); err != nil {
-		return fmt.Errorf("urls bulk delete: %v", err)
+		return fmt.Errorf("urls bulk delete: %w", err)
 	}
 	return nil
 }

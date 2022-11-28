@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/caarlos0/env/v6"
+
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
