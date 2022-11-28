@@ -31,7 +31,7 @@ func New(ctx context.Context, connectString string, l *logrus.Logger) (*SQLStore
 	}
 
 	if err := s.migrate(ctx); err != nil {
-		return nil, fmt.Errorf("migrate store: %v", err)
+		return nil, fmt.Errorf("migrate store: %w", err)
 	}
 
 	s.l.Info("successfully created migrations")
