@@ -52,6 +52,7 @@ func init() {
 			),
 		),
 		logger.WithOutput(io.Discard),
+		logger.WithLevel(logrus.TraceLevel),
 		logger.WithReportCaller(true),
 		logger.WithDefaultFormatter(logger.JSONFormatter),
 	)
@@ -74,22 +75,22 @@ func NewEncryptor() error {
 
 	key, err := generateRandom(aes.BlockSize)
 	if err != nil {
-		return fmt.Errorf("generate key: %v", err)
+		return fmt.Errorf("generate key: %w", err)
 	}
 
 	aesBlock, err := aes.NewCipher(key)
 	if err != nil {
-		return fmt.Errorf("initialize cipher: %v", err)
+		return fmt.Errorf("initialize cipher: %w", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(aesBlock)
 	if err != nil {
-		return fmt.Errorf("initialize GCM encryptor: %v", err)
+		return fmt.Errorf("initialize GCM encryptor: %w", err)
 	}
 
 	nonce, err := generateRandom(aesGCM.NonceSize())
 	if err != nil {
-		return fmt.Errorf("initialize GCM nonce: %v", err)
+		return fmt.Errorf("initialize GCM nonce: %w", err)
 	}
 
 	encryptor = &Encryptor{

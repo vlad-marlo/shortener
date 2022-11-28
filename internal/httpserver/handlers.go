@@ -22,8 +22,7 @@ const (
 	cancelCoolDown = 30 * time.Millisecond
 )
 
-// handleURLGet is redirecting user to base url with id which is provided in
-// url path by chi url params.
+// handleURLGet is redirecting user to base url with id which is provided in url path by chi url params.
 func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	reqID := middleware.GetReqID(ctx)

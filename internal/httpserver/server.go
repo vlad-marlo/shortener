@@ -48,7 +48,7 @@ func (s *Server) Close() {
 	s.poller.Close()
 }
 
-// configureRoutes ...
+// configureRoutes initialize all endpoints of server
 func (s *Server) configureRoutes() {
 	s.Route("/debug", func(r chi.Router) {
 		r.HandleFunc("/pprof/", pprof.Index)
@@ -80,7 +80,7 @@ func (s *Server) configureRoutes() {
 	})
 }
 
-// configureMiddlewares ...
+// configureMiddlewares is adding middlewares to server
 func (s *Server) configureMiddlewares() {
 	s.Use(
 		chimiddlewares.RequestID,
@@ -93,12 +93,12 @@ func (s *Server) configureMiddlewares() {
 	)
 }
 
-// configurePoller ...
+// configurePoller creates new poller
 func (s *Server) configurePoller() {
 	s.poller = poll.New(s.store)
 }
 
-// ListenAndServe ...
+// ListenAndServe is starting http server on correct address
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.config.BindAddr, s.Router)
 }
