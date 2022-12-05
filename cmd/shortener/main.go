@@ -75,12 +75,12 @@ func main() {
 		storage, err = filebased.New(config.FilePath)
 	}
 	if err != nil {
-		serverLogger.Fatalf("init storage: %v", err)
+		serverLogger.Panicf("init storage: %v", err)
 	}
 
 	defer func() {
 		if err := storage.Close(); err != nil {
-			storeLogger.Fatalf("close server: %v", err)
+			storeLogger.Panicf("close server: %v", err)
 		}
 	}()
 
@@ -92,7 +92,7 @@ func main() {
 
 	go func() {
 		// logging fatal because listen and server always return not-nil error
-		serverLogger.Fatalf("listen and server server: %v", s.ListenAndServe())
+		serverLogger.Panicf("listen and server server: %v", s.ListenAndServe())
 	}()
 
 	interrupt := make(chan os.Signal, 1)

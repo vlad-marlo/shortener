@@ -66,7 +66,7 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 	if err != nil {
 		pgErr, ok := err.(*pq.Error)
 		if ok && pgErr.Code == pgerrcode.UniqueViolation {
-			if err := s.GetByOriginalURL(ctx, u); err != nil {
+			if err = s.GetByOriginalURL(ctx, u); err != nil {
 				return err
 			}
 			return store.ErrAlreadyExists
@@ -179,18 +179,18 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	)
 
 	defer func() {
-		if err := stmt.Close(); err != nil && err != sql.ErrTxDone {
+		if err = stmt.Close(); err != nil && err != sql.ErrTxDone {
 			s.l.Errorf("update drivers: unable to close stmt: %v", err)
 		}
 	}()
 
 	for _, v := range urls {
-		if _, err := stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User); err != nil {
+		if _, err = stmt.ExecContext(ctx, v.ID, v.BaseURL, v.User); err != nil {
 			pgERR := err.(*pq.Error)
 			if pgERR.Code != pgerrcode.UniqueViolation {
 				return nil, err
 			}
-			if err := tx.QueryRowContext(
+			if err = tx.QueryRowContext(
 				ctx,
 				`SELECT short FROM urls WHERE original_url = $1`,
 				v.BaseURL,
@@ -206,7 +206,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 			},
 		)
 	}
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		s.l.Errorf("update drivers: unable to commit: %v", err)
 		return nil, err
 	}
