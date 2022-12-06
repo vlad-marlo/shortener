@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	_ "net/http/pprof"
 	"os"
@@ -23,14 +24,16 @@ import (
 )
 
 var (
-	logLevel            logrus.Level = logrus.TraceLevel
-	logOutput           io.Writer    = io.Discard
-	logDir              string       = "logs"
-	logDefaultFormatter string       = log.JSONFormatter
-	logFormatter        *logrus.Formatter
+	logLevel                             = logrus.TraceLevel
+	logOutput                            = io.Discard
+	logDir                               = "logs"
+	logDefaultFormatter                  = log.JSONFormatter
+	logFormatter                         *logrus.Formatter
+	buildVersion, buildDate, buildCommit string
 )
 
 func main() {
+	debugInfo()
 	storeLogger := createLogger("storage")
 	serverLogger := createLogger("server")
 
@@ -101,7 +104,16 @@ func initStorage(cfg *httpserver.Config, logger *logrus.Logger) (storage store.S
 	case store.SQLStore:
 		storage, err = sqlstore.New(context.Background(), cfg.Database, logger)
 	default:
-		storage, err = filebased.New(cfg.FilePath)
+		storage = inmemory.New()
 	}
 	return
+}
+
+func debugInfo() {
+	for _, c := range []*string{&buildCommit, &buildDate, &buildVersion} {
+		if *c == "" {
+			*c = "N/A"
+		}
+	}
+	fmt.Printf("Build version: %s \nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 }
