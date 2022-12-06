@@ -2,7 +2,8 @@ package httpserver
 
 import (
 	"flag"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/caarlos0/env/v6"
 
@@ -21,7 +22,7 @@ type Config struct {
 func NewConfig() *Config {
 	c := &Config{}
 	if err := env.Parse(c); err != nil {
-		log.Fatal(err)
+		log.Panicf("env parse: %v", err)
 	}
 	flag.StringVar(&c.BindAddr, "a", c.BindAddr, "server will be started with this url")
 	flag.StringVar(&c.BaseURL, "b", c.BaseURL, "url will be used in generation of shorten url")

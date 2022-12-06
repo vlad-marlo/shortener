@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	_ "net/http/pprof"
 	"os"
@@ -14,73 +15,38 @@ import (
 	"github.com/vlad-marlo/logger/hook"
 
 	_ "github.com/vlad-marlo/shortener/internal/httpserver/middleware"
-
-	"github.com/vlad-marlo/shortener/internal/httpserver"
-	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
+
+	"github.com/vlad-marlo/shortener/internal/httpserver"
+	"github.com/vlad-marlo/shortener/internal/store"
+)
+
+var (
+	logLevel                             = logrus.TraceLevel
+	logOutput                            = io.Discard
+	logDir                               = "logs"
+	logDefaultFormatter                  = log.JSONFormatter
+	logFormatter                         *logrus.Formatter
+	buildVersion, buildDate, buildCommit string
 )
 
 func main() {
-	serverLogger := log.WithOpts(
-		log.WithOutput(io.Discard),
-		log.WithLevel(logrus.TraceLevel),
-		log.WithReportCaller(true),
-		log.WithDefaultFormatter(log.JSONFormatter),
-		log.WithHook(
-			hook.New(
-				logrus.AllLevels,
-				[]io.Writer{os.Stdout},
-				hook.WithFileOutput(
-					"logs",
-					"server",
-					time.Now().Format("2006-January-02-15"),
-				),
-			),
-		),
-	)
-
-	storeLogger := log.WithOpts(
-		log.WithOutput(io.Discard),
-		log.WithLevel(logrus.TraceLevel),
-		log.WithReportCaller(true),
-		log.WithDefaultFormatter(log.JSONFormatter),
-		log.WithHook(
-			hook.New(
-				logrus.AllLevels,
-				[]io.Writer{os.Stdout},
-				hook.WithFileOutput(
-					"logs",
-					"storage",
-					time.Now().Format("2006-January-02-15"),
-				),
-			),
-		),
-	)
+	debugInfo()
+	storeLogger := createLogger("storage")
+	serverLogger := createLogger("server")
 
 	config := httpserver.NewConfig()
 
-	var storage store.Store
-	var err error
-
-	switch config.StorageType {
-	case store.InMemoryStorage:
-		storage, err = inmemory.New(), nil
-	case store.FileBasedStorage:
-		storage, err = filebased.New(config.FilePath)
-	case store.SQLStore:
-		storage, err = sqlstore.New(context.Background(), config.Database, storeLogger)
-	default:
-		storage, err = filebased.New(config.FilePath)
-	}
+	storage, err := initStorage(config, storeLogger)
 	if err != nil {
-		serverLogger.Fatalf("init storage: %v", err)
+		serverLogger.Panicf("init storage: %v", err)
 	}
 
 	defer func() {
 		if err := storage.Close(); err != nil {
-			storeLogger.Fatalf("close server: %v", err)
+			storeLogger.Panicf("close server: %v", err)
 		}
 	}()
 
@@ -92,7 +58,7 @@ func main() {
 
 	go func() {
 		// logging fatal because listen and server always return not-nil error
-		serverLogger.Fatalf("listen and server server: %v", s.ListenAndServe())
+		serverLogger.Panicf("listen and server server: %v", s.ListenAndServe())
 	}()
 
 	interrupt := make(chan os.Signal, 1)
@@ -101,4 +67,53 @@ func main() {
 	serverLogger.WithFields(map[string]interface{}{
 		"signal": sig.String(),
 	}).Info("graceful shut down")
+}
+
+// createLogger creates new named logger with stdout and file output.
+func createLogger(name string) *logrus.Logger {
+	opts := []log.OptFunc{
+		log.WithOutput(logOutput),
+		log.WithLevel(logLevel),
+		log.WithReportCaller(true),
+		log.WithDefaultFormatter(logDefaultFormatter),
+		log.WithHook(
+			hook.New(
+				logrus.AllLevels,
+				[]io.Writer{os.Stdout},
+				hook.WithFileOutput(
+					logDir,
+					name,
+					time.Now().Format("2006-January-02-15"),
+				),
+			),
+		),
+	}
+	if logFormatter != nil {
+		opts = append(opts, log.WithFormatter(*logFormatter))
+	}
+
+	return log.WithOpts(opts...)
+}
+
+func initStorage(cfg *httpserver.Config, logger *logrus.Logger) (storage store.Store, err error) {
+	switch cfg.StorageType {
+	case store.InMemoryStorage:
+		storage = inmemory.New()
+	case store.FileBasedStorage:
+		storage, err = filebased.New(cfg.FilePath)
+	case store.SQLStore:
+		storage, err = sqlstore.New(context.Background(), cfg.Database, logger)
+	default:
+		storage = inmemory.New()
+	}
+	return
+}
+
+func debugInfo() {
+	for _, c := range []*string{&buildCommit, &buildDate, &buildVersion} {
+		if *c == "" {
+			*c = "N/A"
+		}
+	}
+	fmt.Printf("Build version: %s \nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 }

@@ -2,7 +2,6 @@ package poll
 
 import (
 	"log"
-	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 )
@@ -10,7 +9,6 @@ import (
 type (
 	Poll struct {
 		store store.Store
-		mu    sync.Mutex
 		input chan *task
 		stop  chan struct{}
 	}

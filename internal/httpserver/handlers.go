@@ -62,15 +62,16 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	data, err := io.ReadAll(r.Body)
-	defer func() {
-		if err := r.Body.Close(); err != nil {
-			log.Printf("r body close: %v", err)
-		}
-	}()
-
 	if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
 		return
 	}
+
+	defer func() {
+		if err = r.Body.Close(); err != nil {
+			s.logger.Errorf("request body close: %v", err)
+		}
+	}()
+
 	if len(data) == 0 {
 		s.handleErrorOrStatus(w, ErrIncorrectRequestBody, fields, http.StatusBadRequest)
 		return
@@ -206,7 +207,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 
 // handlePingStore is debug handler which gives user access to check db connection.
 //
-// In order that storage is not availible, handler will return http status 500. In other cases 200.
+// In order that storage is not available, handler will return http status 500. In other cases 200.
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
@@ -240,14 +241,15 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.Unmarshal(body, &data); s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
+	if err = json.Unmarshal(body, &data); s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
 		return
 	}
 
 	userID := getUserFromRequest(r)
 
 	for _, v := range data {
-		u, err := model.NewURL(v.OriginalURL, userID, v.CorrelationID)
+		var u *model.URL
+		u, err = model.NewURL(v.OriginalURL, userID, v.CorrelationID)
 		if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
 			return
 		}
@@ -286,7 +288,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 // which was created by him.
 //
 // Request must be json array of strings where every element is url id.
-// Only user which create url have access to deliting urls.
+// Only user which create url have access to deleting urls.
 func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
