@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -61,10 +61,11 @@ func TestInitStorage(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			storage, err := initStorage(tc.cfg, logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard))))
-			require.NoError(t, err)
 
-			if tc.cfg.Database == "" {
-				require.NoError(t, err, fmt.Sprintf("init storage: %v", err))
+			if tc.cfg.StorageType == store.SQLStore {
+				if tc.cfg.Database == "" || errors.Is(err, store.ErrNotAccessible) {
+					return
+				}
 				assert.IsType(t, storage, tc.wantType)
 			}
 

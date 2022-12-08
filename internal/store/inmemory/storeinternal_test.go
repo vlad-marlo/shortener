@@ -122,5 +122,7 @@ func TestStore_Ping(t *testing.T) {
 }
 
 func TestStore_Close(t *testing.T) {
-	require.NoError(t, New().Close())
+	s := New()
+	require.NoError(t, s.Close())
+	require.Error(t, s.Close())
 }

@@ -11,11 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/vlad-marlo/logger"
-
-	"github.com/vlad-marlo/shortener/internal/store"
 )
 
-func TestStore(t *testing.T) store.Store {
+func TestStore(t *testing.T) (*SQLStore, func(t *testing.T)) {
 	t.Helper()
 	dns := os.Getenv("TEST_DB_URI")
 	if dns == "" {
@@ -28,5 +26,8 @@ func TestStore(t *testing.T) store.Store {
 	}
 	storage, err := New(context.Background(), dns, logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard))), db)
 	require.NoError(t, err, fmt.Sprintf("init db storage: %v", err))
-	return storage
+	return storage, func(t *testing.T) {
+		_, err = storage.DB.Exec("TRUNCATE urls CASCADE;")
+		require.NoError(t, err, fmt.Sprintf("truncate db: %v", err))
+	}
 }

@@ -92,11 +92,6 @@ func (s *Server) configureMiddlewares() {
 	)
 }
 
-// configurePoller creates new poller
-func (s *Server) configurePoller() {
-	s.poller = poll.New(s.store)
-}
-
 // ListenAndServe is starting http server on correct address
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.config.BindAddr, s.Router)

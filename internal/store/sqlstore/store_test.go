@@ -11,14 +11,20 @@ import (
 )
 
 func TestSQLStore_Close(t *testing.T) {
-	store := TestStore(t)
-	require.NoError(t, store.Close())
+	s, teardown := TestStore(t)
+	defer teardown(t)
+
+	require.NoError(t, s.Close())
+	require.Error(t, s.Close(), "close already closed storage")
 }
 
 func TestTestStore(t *testing.T) {
 	const DBEnvKey = "TEST_DB_URI"
 	t.Run("positive case", func(t *testing.T) {
-		require.NoError(t, TestStore(t).Close())
+		s, td := TestStore(t)
+		defer td(t)
+
+		require.NoError(t, s.Close())
 	})
 	t.Run("check skips", func(t *testing.T) {
 		uri := os.Getenv(DBEnvKey)
@@ -34,13 +40,15 @@ func TestTestStore(t *testing.T) {
 }
 
 func TestSQLStore_Ping(t *testing.T) {
-	store := TestStore(t)
-	require.NoError(t, store.Ping(context.Background()))
-	require.NoError(t, store.Close())
+	s, td := TestStore(t)
+	defer td(t)
+	require.NoError(t, s.Ping(context.Background()))
+	require.NoError(t, s.Close())
 }
 
 func TestSQLStore_GetByID(t *testing.T) {
-	s := TestStore(t)
+	s, td := TestStore(t)
+	defer td(t)
 	defer require.NoError(t, s.Close())
 
 	tt := []struct {
@@ -63,6 +71,27 @@ func TestSQLStore_GetByID(t *testing.T) {
 }
 
 func TestSQLStore_Create(t *testing.T) {
-	store := TestStore(t)
+	type (
+		args struct {
+		}
+		want struct {
+		}
+	)
+	store, teardown := TestStore(t)
+	defer teardown(t)
 	defer require.NoError(t, store.Close())
+	tt := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "positive #1",
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+
+		})
+	}
 }

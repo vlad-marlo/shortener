@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v4"
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 
@@ -30,6 +29,10 @@ func New(ctx context.Context, connectString string, l *logrus.Entry, db *sql.DB)
 	s = &SQLStore{
 		DB: db,
 		l:  l,
+	}
+
+	if err = s.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("ping: %w", store.ErrNotAccessible)
 	}
 
 	if err = s.migrate(ctx); err != nil {
@@ -107,9 +110,6 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 		&u.User,
 		&u.IsDeleted,
 	); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, store.ErrNotFound
-		}
 		return nil, err
 	}
 

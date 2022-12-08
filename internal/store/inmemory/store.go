@@ -10,7 +10,8 @@ import (
 )
 
 type Store struct {
-	mu sync.Mutex
+	mu     sync.Mutex
+	closed bool
 
 	urls map[string]*model.URL
 }
@@ -112,5 +113,11 @@ func (s *Store) Ping(_ context.Context) error {
 }
 
 func (s *Store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return store.ErrAlreadyClosed
+	}
+	s.closed = true
 	return nil
 }

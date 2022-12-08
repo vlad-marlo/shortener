@@ -336,6 +336,7 @@ func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(data))
+	defer assert.NoError(t, w.Result().Body.Close())
 	defer assert.NoError(t, r.Body.Close())
 
 	storage.
@@ -344,7 +345,7 @@ func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
 		Return(nil).
 		AnyTimes()
 	server.handleURLBulkDelete(w, r)
-	assert.Equal(t, http.StatusAccepted, w.Result().StatusCode)
+	assert.Equal(t, http.StatusAccepted, w.Code)
 }
 
 // TestServer_handleURLBulkDelete_Negative ...
@@ -355,10 +356,11 @@ func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
 	server, afterFunc := TestServer(t, storage)
 	defer afterFunc()
 
-	data := `["1",]`
+	data := `["1",`
 
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(data))
+	r := httptest.NewRequest("POST", "/", strings.NewReader(data))
+	defer assert.NoError(t, w.Result().Body.Close())
 	defer assert.NoError(t, r.Body.Close())
 
 	storage.
@@ -367,7 +369,7 @@ func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
 		Return(nil).
 		AnyTimes()
 	server.handleURLBulkDelete(w, r)
-	assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestServer_handlePingStore(t *testing.T) {
@@ -378,14 +380,16 @@ func TestServer_handlePingStore(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/shorten/batch", nil)
+	defer assert.NoError(t, w.Result().Body.Close())
 	defer assert.NoError(t, r.Body.Close())
+
 	storage.
 		EXPECT().
 		Ping(gomock.Any()).
 		Return(nil).
 		AnyTimes()
 	server.handlePingStore(w, r)
-	assert.Equal(t, w.Result().StatusCode, http.StatusOK)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
@@ -458,19 +462,17 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 				AnyTimes()
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("POST", "/urls", strings.NewReader(tc.data))
+			r := httptest.NewRequest("POST", "/", strings.NewReader(tc.data))
 			defer assert.NoError(t, r.Body.Close())
 
 			s.handleURLBulkCreate(w, r)
+			var resp []*model.BatchCreateURLsResponse
 
 			assert.Equal(t, tc.want.statusCode, w.Result().StatusCode)
 			if tc.want.statusCode != http.StatusCreated {
 				return
 			}
-			var resp []*model.BatchCreateURLsResponse
-			data, err := io.ReadAll(w.Result().Body)
-			require.NoError(t, err, "read body")
-			require.NoError(t, json.Unmarshal(data, &resp))
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 			require.Contains(t, "application/json", w.Result().Header.Get("content-type"))
 			for _, m := range resp {
 				assert.Contains(t, tc.want.data, m.CorrelationID, "xdddddd", tc.want.data, resp)
@@ -525,11 +527,9 @@ func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 			r := httptest.NewRequest("GET", "/sdf", nil)
 			r = r.WithContext(context.WithValue(r.Context(), middleware.UserCTXName, u))
 			defer assert.NoError(t, r.Body.Close())
-
 			server.handleGetUserURLs(w, r)
 
-			got, err := io.ReadAll(w.Result().Body)
-			require.NoError(t, err, "read body")
+			// t.Logf("status cod: %d %s", w.Result().StatusCode, w.Body.String())
 
 			var responseURLs []*model.AllUserURLsResponse
 			for _, u := range urls {
@@ -542,7 +542,7 @@ func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 
 			expected, err := json.Marshal(responseURLs)
 			require.NoError(t, err, fmt.Sprintf("json marshal: %v", err))
-			assert.JSONEq(t, string(expected), string(got))
+			assert.JSONEq(t, string(expected), w.Body.String())
 		})
 
 	}
