@@ -336,6 +336,7 @@ func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(data))
+	defer assert.NoError(t, r.Body.Close())
 
 	storage.
 		EXPECT().
@@ -358,6 +359,7 @@ func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(data))
+	defer assert.NoError(t, r.Body.Close())
 
 	storage.
 		EXPECT().
@@ -376,6 +378,7 @@ func TestServer_handlePingStore(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/shorten/batch", nil)
+	defer assert.NoError(t, r.Body.Close())
 	storage.
 		EXPECT().
 		Ping(gomock.Any()).
@@ -456,6 +459,7 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", "/urls", strings.NewReader(tc.data))
+			defer assert.NoError(t, r.Body.Close())
 
 			s.handleURLBulkCreate(w, r)
 
@@ -520,6 +524,7 @@ func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/sdf", nil)
 			r = r.WithContext(context.WithValue(r.Context(), middleware.UserCTXName, u))
+			defer assert.NoError(t, r.Body.Close())
 
 			server.handleGetUserURLs(w, r)
 
