@@ -541,6 +541,7 @@ func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 			}
 
 			expected, err := json.Marshal(responseURLs)
+			require.NoError(t, err, fmt.Sprintf("json marshal: %v", err))
 			assert.JSONEq(t, string(expected), string(got))
 		})
 
