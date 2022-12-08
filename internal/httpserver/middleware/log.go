@@ -26,7 +26,7 @@ func (c *codeWriter) Write(b []byte) (int, error) {
 	return c.ResponseWriter.Write(b)
 }
 
-func Logger(logger *logrus.Logger) func(next http.Handler) http.Handler {
+func Logger(logger *logrus.Entry) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rw := &codeWriter{w, http.StatusOK}

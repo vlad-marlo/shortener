@@ -20,7 +20,7 @@ func ExampleNew() {
 			// ...
 		}
 	}()
-	server := httpserver.New(config, storage, logrus.New())
+	server := httpserver.New(config, storage, logrus.NewEntry(logrus.New()))
 	// always close server
 	defer server.Close()
 

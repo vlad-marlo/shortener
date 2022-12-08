@@ -17,7 +17,7 @@ func ExampleLogger() {
 		_ = http.ListenAndServe(
 			"localhost:8080",
 			// start server wrapping your handler with middleware
-			middleware.Logger(logger)(handler),
+			middleware.Logger(logrus.NewEntry(logger))(handler),
 		)
 	}()
 }

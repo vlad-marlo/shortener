@@ -24,12 +24,14 @@ import (
 )
 
 var (
-	logLevel                             = logrus.TraceLevel
-	logOutput                            = io.Discard
-	logDir                               = "logs"
-	logDefaultFormatter                  = log.JSONFormatter
-	logFormatter                         *logrus.Formatter
-	buildVersion, buildDate, buildCommit string
+	logLevel            = logrus.TraceLevel
+	logOutput           = io.Discard
+	logDir              = "logs"
+	logDefaultFormatter = log.JSONFormatter
+	logFormatter        *logrus.Formatter
+	buildVersion        = "N/A"
+	buildDate           = "N/A"
+	buildCommit         = "N/A"
 )
 
 func main() {
@@ -70,7 +72,7 @@ func main() {
 }
 
 // createLogger creates new named logger with stdout and file output.
-func createLogger(name string) *logrus.Logger {
+func createLogger(name string) *logrus.Entry {
 	opts := []log.OptFunc{
 		log.WithOutput(logOutput),
 		log.WithLevel(logLevel),
@@ -92,17 +94,21 @@ func createLogger(name string) *logrus.Logger {
 		opts = append(opts, log.WithFormatter(*logFormatter))
 	}
 
-	return log.WithOpts(opts...)
+	return log.WithOpts(opts...).WithFields(logrus.Fields{
+		"build_version": buildVersion,
+		"build_commit":  buildCommit,
+		"build_date":    buildDate,
+	})
 }
 
-func initStorage(cfg *httpserver.Config, logger *logrus.Logger) (storage store.Store, err error) {
+func initStorage(cfg *httpserver.Config, logger *logrus.Entry) (storage store.Store, err error) {
 	switch cfg.StorageType {
 	case store.InMemoryStorage:
 		storage = inmemory.New()
 	case store.FileBasedStorage:
 		storage, err = filebased.New(cfg.FilePath)
 	case store.SQLStore:
-		storage, err = sqlstore.New(context.Background(), cfg.Database, logger)
+		storage, err = sqlstore.New(context.Background(), cfg.Database, logger, nil)
 	default:
 		storage = inmemory.New()
 	}
@@ -110,10 +116,5 @@ func initStorage(cfg *httpserver.Config, logger *logrus.Logger) (storage store.S
 }
 
 func debugInfo() {
-	for _, c := range []*string{&buildCommit, &buildDate, &buildVersion} {
-		if *c == "" {
-			*c = "N/A"
-		}
-	}
 	fmt.Printf("Build version: %s \nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 }

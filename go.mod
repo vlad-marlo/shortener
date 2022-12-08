@@ -5,7 +5,9 @@ go 1.18
 require (
 	github.com/caarlos0/env/v6 v6.9.3
 	github.com/go-chi/chi/v5 v5.0.7
+	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
+	github.com/gostaticanalysis/nilerr v0.1.1
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/lib/pq v1.10.6
@@ -13,12 +15,12 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/vlad-marlo/logger v0.0.0-20221119182609-9fcce49dd1b2
 	golang.org/x/tools v0.3.0
+	honnef.co/go/tools v0.3.3
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.1 // indirect
-	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.13.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -36,5 +38,4 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	honnef.co/go/tools v0.3.3 // indirect
 )

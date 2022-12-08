@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/vlad-marlo/logger"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -22,9 +23,9 @@ func BenchmarkServer_handleURLGet(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logger.WithOpts(
+		logrus.NewEntry(logger.WithOpts(
 			logger.WithOutput(io.Discard),
-		),
+		)),
 	)
 
 	ts := httptest.NewServer(s.Router)
@@ -60,9 +61,9 @@ func BenchmarkServer_handleURLPost(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logger.WithOpts(
+		logrus.NewEntry(logger.WithOpts(
 			logger.WithOutput(io.Discard),
-		),
+		)),
 	)
 
 	ts := httptest.NewServer(s.Router)
@@ -98,9 +99,9 @@ func BenchmarkServer_handleURLPostJSON(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logger.WithOpts(
+		logrus.NewEntry(logger.WithOpts(
 			logger.WithOutput(io.Discard),
-		),
+		)),
 	)
 
 	ts := httptest.NewServer(s.Router)
@@ -136,9 +137,9 @@ func BenchmarkServer_handleURLBatchCreate(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logger.WithOpts(
+		logrus.NewEntry(logger.WithOpts(
 			logger.WithOutput(io.Discard),
-		),
+		)),
 	)
 
 	ts := httptest.NewServer(s.Router)

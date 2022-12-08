@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -245,6 +244,11 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(data) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	userID := getUserFromRequest(r)
 
 	for _, v := range data {
@@ -263,13 +267,12 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp, err := s.store.URLsBulkCreate(ctx, urls)
+	if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
+		return
+	}
 	for _, v := range resp {
 		id := v.ShortURL
 		v.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, id)
-	}
-
-	if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
-		return
 	}
 
 	body, err = json.Marshal(resp)
@@ -280,7 +283,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if _, err = w.Write(body); err != nil {
-		log.Fatal(err)
+		s.logger.WithFields(fields).Errorf("write response: %v", err)
 	}
 }
 
@@ -298,7 +301,7 @@ func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			log.Print(err)
+			s.logger.Errorf("defering request body close: %v ", err)
 		}
 	}()
 

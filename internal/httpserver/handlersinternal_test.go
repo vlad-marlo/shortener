@@ -2,22 +2,26 @@ package httpserver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/vlad-marlo/shortener/internal/store/inmemory"
-
+	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/inmemory"
+	mock_store "github.com/vlad-marlo/shortener/internal/store/mock"
+	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 // testRequest ...
@@ -113,7 +117,7 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, logrus.New())
+	}, storage, logrus.NewEntry(logrus.New()))
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -185,7 +189,7 @@ func TestServer_HandleURLGet(t *testing.T) {
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, logrus.New())
+	}, storage, logrus.NewEntry(logrus.New()))
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -282,7 +286,7 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, logrus.New())
+	}, storage, logrus.NewEntry(logrus.New()))
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -316,5 +320,224 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 
 			require.Contains(t, res.Request.URL.String(), tt.args.request.URL)
 		})
+	}
+}
+
+// TestServer_handleURLBulkDelete_Positive ...
+func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	storage := mock_store.NewMockStore(ctrl)
+
+	server, afterFunc := TestServer(t, storage)
+	defer afterFunc()
+
+	data := `["1", "2", "3"]`
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(data))
+
+	storage.
+		EXPECT().
+		URLsBulkDelete(gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
+	server.handleURLBulkDelete(w, r)
+	assert.Equal(t, http.StatusAccepted, w.Result().StatusCode)
+}
+
+// TestServer_handleURLBulkDelete_Negative ...
+func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storage := mock_store.NewMockStore(ctrl)
+
+	server, afterFunc := TestServer(t, storage)
+	defer afterFunc()
+
+	data := `["1",]`
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(data))
+
+	storage.
+		EXPECT().
+		URLsBulkDelete(gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
+	server.handleURLBulkDelete(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+}
+
+func TestServer_handlePingStore(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storage := mock_store.NewMockStore(ctrl)
+	server, afterFunc := TestServer(t, storage)
+	defer afterFunc()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api/shorten/batch", nil)
+	storage.
+		EXPECT().
+		Ping(gomock.Any()).
+		Return(nil).
+		AnyTimes()
+	server.handlePingStore(w, r)
+	assert.Equal(t, w.Result().StatusCode, http.StatusOK)
+}
+
+func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
+	type args struct {
+		urls []*model.BatchCreateURLsResponse
+		err  error
+	}
+	type want struct {
+		statusCode int
+		data       []string
+	}
+	tt := []struct {
+		name string
+		data string
+		args args
+		want want
+	}{
+		{
+			name: "positive case #1",
+			data: `[{ "correlation_id": "a", "original_url": "https://ya.ru" }, { "correlation_id": "b", "original_url": "https://yandex.ru" }]`,
+			args: args{
+				urls: []*model.BatchCreateURLsResponse{
+					{
+						ShortURL:      "asdfasdfasdf",
+						CorrelationID: "a",
+					},
+					{
+						ShortURL:      "sdfadsafsd",
+						CorrelationID: "b",
+					},
+				},
+			},
+			want: want{
+				statusCode: http.StatusCreated,
+				data:       []string{"a", "b"},
+			},
+		},
+		{
+			name: "negative case #1",
+			data: `[]`,
+			args: args{
+				err: store.ErrAlreadyExists,
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "negative case #2",
+			data: `[]`,
+			args: args{
+				err: store.ErrAlreadyExists,
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			storage := mock_store.NewMockStore(ctrl)
+			s, afterFunc := TestServer(t, storage)
+			defer afterFunc()
+
+			storage.
+				EXPECT().
+				URLsBulkCreate(gomock.Any(), gomock.Any()).
+				Return(tc.args.urls, tc.args.err).
+				AnyTimes()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("POST", "/urls", strings.NewReader(tc.data))
+
+			s.handleURLBulkCreate(w, r)
+
+			assert.Equal(t, tc.want.statusCode, w.Result().StatusCode)
+			if tc.want.statusCode != http.StatusCreated {
+				return
+			}
+			var resp []*model.BatchCreateURLsResponse
+			data, err := io.ReadAll(w.Result().Body)
+			require.NoError(t, err, "read body")
+			require.NoError(t, json.Unmarshal(data, &resp))
+			require.Contains(t, "application/json", w.Result().Header.Get("content-type"))
+			for _, m := range resp {
+				assert.Contains(t, tc.want.data, m.CorrelationID, "xdddddd", tc.want.data, resp)
+			}
+		})
+	}
+}
+
+func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
+	data := map[string][]*model.URL{
+		"1": {
+			&model.URL{
+				BaseURL: "first",
+				User:    "1",
+				ID:      "1",
+			},
+			&model.URL{
+				BaseURL: "second",
+				User:    "1",
+				ID:      "2",
+			},
+		},
+		"2": {
+			&model.URL{
+				BaseURL: "third",
+				User:    "2",
+				ID:      "3",
+			},
+			&model.URL{
+				BaseURL: "fourth",
+				User:    "2",
+				ID:      "4",
+			},
+		},
+	}
+
+	for u, urls := range data {
+		t.Run(fmt.Sprintf("test user: %s", u), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			storage := mock_store.NewMockStore(ctrl)
+
+			server, afterFunc := TestServer(t, storage)
+			defer afterFunc()
+
+			storage.
+				EXPECT().
+				GetAllUserURLs(gomock.Any(), u).
+				Return(urls, nil).
+				AnyTimes()
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/sdf", nil)
+			r = r.WithContext(context.WithValue(r.Context(), middleware.UserCTXName, u))
+
+			server.handleGetUserURLs(w, r)
+
+			got, err := io.ReadAll(w.Result().Body)
+			require.NoError(t, err, "read body")
+
+			var responseURLs []*model.AllUserURLsResponse
+			for _, u := range urls {
+				resp := &model.AllUserURLsResponse{
+					ShortURL:    fmt.Sprintf("%s/%s", server.config.BaseURL, u.ID),
+					OriginalURL: u.BaseURL,
+				}
+				responseURLs = append(responseURLs, resp)
+			}
+
+			expected, err := json.Marshal(responseURLs)
+			assert.JSONEq(t, string(expected), string(got))
+		})
+
 	}
 }

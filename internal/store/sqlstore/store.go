@@ -16,21 +16,23 @@ import (
 
 type SQLStore struct {
 	DB *sql.DB
-	l  *logrus.Logger
+	l  *logrus.Entry
 }
 
 // New ...
-func New(ctx context.Context, connectString string, l *logrus.Logger) (*SQLStore, error) {
-	db, err := sql.Open("postgres", connectString)
-	if err != nil {
-		return nil, err
+func New(ctx context.Context, connectString string, l *logrus.Entry, db *sql.DB) (s *SQLStore, err error) {
+	if db == nil {
+		db, err = sql.Open("postgres", connectString)
+		if err != nil {
+			return nil, err
+		}
 	}
-	s := &SQLStore{
+	s = &SQLStore{
 		DB: db,
 		l:  l,
 	}
 
-	if err := s.migrate(ctx); err != nil {
+	if err = s.migrate(ctx); err != nil {
 		return nil, fmt.Errorf("migrate store: %w", err)
 	}
 

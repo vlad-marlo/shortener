@@ -19,25 +19,24 @@ type Server struct {
 	store  store.Store
 	config *Config
 	poller *poll.Poll
-	logger *logrus.Logger
+	logger *logrus.Entry
 }
 
 // New return new configured server with params from config object
 // need for creating only one connection to db
-func New(config *Config, storage store.Store, l *logrus.Logger) *Server {
+func New(config *Config, storage store.Store, l *logrus.Entry) *Server {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
 		store:  storage,
+		poller: poll.New(storage),
 	}
 	s.configureMiddlewares()
 	l.Info("middleware configured successfully")
 
 	s.configureRoutes()
 	l.Info("routes configured successfully")
-
-	s.configurePoller()
 
 	l.Info("store configured successfully")
 
@@ -73,9 +72,9 @@ func (s *Server) configureRoutes() {
 		r.Post("/shorten", s.handleURLCreateJSON)
 		r.Post("/shorten/batch", s.handleURLBulkCreate)
 
-		r.Route("/user/urls", func(rc chi.Router) {
-			rc.Get("/", s.handleGetUserURLs)
-			rc.Delete("/", s.handleURLBulkDelete)
+		r.Route("/user/urls", func(r chi.Router) {
+			r.Get("/", s.handleGetUserURLs)
+			r.Delete("/", s.handleURLBulkDelete)
 		})
 	})
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vlad-marlo/logger"
@@ -52,16 +53,23 @@ func TestInitStorage(t *testing.T) {
 			wantType: &filebased.Store{},
 		},
 	}
+
 	defer func() {
 		_ = os.Remove("xd")
 	}()
+
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			storage, err := initStorage(tc.cfg, logger.WithOpts(logger.WithOutput(io.Discard)))
+			storage, err := initStorage(tc.cfg, logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard))))
 			require.NoError(t, err)
+
 			if tc.cfg.Database == "" {
 				require.NoError(t, err, fmt.Sprintf("init storage: %v", err))
 				assert.IsType(t, storage, tc.wantType)
+			}
+
+			if tc.cfg.StorageType == store.FileBasedStorage && tc.cfg.FilePath != "" {
+				require.NoError(t, os.Remove(tc.cfg.FilePath))
 			}
 		})
 	}
