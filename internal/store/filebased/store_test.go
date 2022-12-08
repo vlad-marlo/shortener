@@ -6,13 +6,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestStore_Ping(t *testing.T) {
 	filename := "file"
-	defer assert.NoError(t, os.Remove(filename))
+	defer func() {
+		_ = os.Remove(filename)
+	}()
+
 	store, err := New(filename)
 	require.NoError(t, err, fmt.Sprintf("init storage: %v", err))
 	err = store.Ping(context.Background())
@@ -21,7 +23,10 @@ func TestStore_Ping(t *testing.T) {
 
 func TestStore_Close(t *testing.T) {
 	filename := "file"
-	defer assert.NoError(t, os.Remove(filename))
+	defer func() {
+		_ = os.Remove(filename)
+	}()
+
 	store, err := New(filename)
 	require.NoError(t, err, fmt.Sprintf("init storage: %v", err))
 	err = store.Close()
