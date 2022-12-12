@@ -32,6 +32,7 @@ var (
 	buildVersion        = "N/A"
 	buildDate           = "N/A"
 	buildCommit         = "N/A"
+	logFileNameFormat   = "2006-January-02-15"
 )
 
 func main() {
@@ -85,7 +86,7 @@ func createLogger(name string) *logrus.Entry {
 				hook.WithFileOutput(
 					logDir,
 					name,
-					time.Now().Format("2006-January-02-15"),
+					time.Now().Format(logFileNameFormat),
 				),
 			),
 		),
