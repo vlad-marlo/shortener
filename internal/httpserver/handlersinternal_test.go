@@ -417,14 +417,15 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 			args: args{
 				urls: []*model.BatchCreateURLsResponse{
 					{
-						ShortURL:      "asdfasdfasdf",
+						ShortURL:      "a",
 						CorrelationID: "a",
 					},
 					{
-						ShortURL:      "sdfadsafsd",
+						ShortURL:      "b",
 						CorrelationID: "b",
 					},
 				},
+				err: nil,
 			},
 			want: want{
 				statusCode: http.StatusCreated,
@@ -435,9 +436,11 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 			name: "negative case #1",
 			data: `[]`,
 			args: args{
-				err: store.ErrAlreadyExists,
+				urls: nil,
+				err:  store.ErrAlreadyExists,
 			},
 			want: want{
+				data:       nil,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -445,9 +448,11 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 			name: "negative case #2",
 			data: `[]`,
 			args: args{
-				err: store.ErrAlreadyExists,
+				urls: nil,
+				err:  store.ErrAlreadyExists,
 			},
 			want: want{
+				data:       nil,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -456,6 +461,7 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			storage := mock_store.NewMockStore(ctrl)
+
 			s, td := TestServer(t, storage)
 			defer require.NoError(t, td())
 
@@ -472,14 +478,17 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 			defer assert.NoError(t, r.Body.Close())
 
 			s.handleURLBulkCreate(w, r)
-			var resp []*model.BatchCreateURLsResponse
-
-			assert.Equal(t, tc.want.statusCode, w.Result().StatusCode)
+			res := w.Result()
+			defer assert.NoError(t, res.Body.Close())
+			assert.Equal(t, tc.want.statusCode, res.StatusCode)
 			if tc.want.statusCode != http.StatusCreated {
 				return
 			}
+
+			var resp []*model.BatchCreateURLsResponse
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-			require.Contains(t, "application/json", w.Result().Header.Get("content-type"))
+
+			require.Contains(t, "application/json", res.Header.Get("content-type"))
 			for _, m := range resp {
 				assert.Contains(t, tc.want.data, m.CorrelationID, "xdddddd", tc.want.data, resp)
 			}

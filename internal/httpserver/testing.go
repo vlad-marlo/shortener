@@ -3,7 +3,6 @@ package httpserver
 import (
 	"io"
 	"sync"
-	"testing"
 
 	"github.com/sirupsen/logrus"
 	"github.com/vlad-marlo/logger"
@@ -19,7 +18,7 @@ var (
 	l    *logrus.Entry
 )
 
-func TestServer(t *testing.T, storage store.Store) (*Server, func() error) {
+func TestServer(t interface{ Helper() }, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
 		c = NewConfig()
 		l = logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard)))
