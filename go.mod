@@ -12,6 +12,7 @@ require (
 	github.com/lib/pq v1.10.6
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
+	github.com/timakin/bodyclose v0.0.0-20221125081123-e39cf3fc478e
 	github.com/vlad-marlo/logger v0.0.0-20221119182609-9fcce49dd1b2
 	golang.org/x/tools v0.4.0
 	honnef.co/go/tools v0.3.3
@@ -23,7 +24,6 @@ require (
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/timakin/bodyclose v0.0.0-20221125081123-e39cf3fc478e // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect

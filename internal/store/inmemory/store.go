@@ -19,7 +19,8 @@ type Store struct {
 // New ...
 func New() *Store {
 	return &Store{
-		urls: make(map[string]*model.URL),
+		urls:   make(map[string]*model.URL),
+		closed: false,
 	}
 }
 
@@ -61,6 +62,7 @@ func (s *Store) Create(ctx context.Context, u *model.URL) (err error) {
 	return
 }
 
+// GetAllUserURLs ...
 func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.URL, err error) {
 	for _, u := range s.urls {
 		if u.User == user {
@@ -72,6 +74,7 @@ func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.UR
 	return
 }
 
+// URLsBulkCreate ...
 func (s *Store) URLsBulkCreate(ctx context.Context, urls []*model.URL) (res []*model.BatchCreateURLsResponse, err error) {
 	for _, u := range urls {
 		if err := ctx.Err(); err != nil {
@@ -97,6 +100,7 @@ func (s *Store) URLsBulkCreate(ctx context.Context, urls []*model.URL) (res []*m
 	return res, nil
 }
 
+// URLsBulkDelete ...
 func (s *Store) URLsBulkDelete(urls []string, user string) error {
 	for _, u := range urls {
 		if url := s.urls[u]; url.User == user {
@@ -108,10 +112,18 @@ func (s *Store) URLsBulkDelete(urls []string, user string) error {
 	return nil
 }
 
+// Ping returns always
 func (s *Store) Ping(_ context.Context) error {
+	s.mu.Lock()
+	ok := s.closed
+	s.mu.Unlock()
+	if ok {
+		return store.ErrAlreadyClosed
+	}
 	return nil
 }
 
+// Close ...
 func (s *Store) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

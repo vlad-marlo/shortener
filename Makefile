@@ -5,12 +5,14 @@ COMMIT=`git log -n 1 --pretty=format:"%H"`
 build:
 	go build -o shortener -ldflags "-X main.buildVersion=v1.18.1 -X 'main.buildDate=$(DATE)' -X main.buildCommit=$(COMMIT)" cmd/shortener/main.go
 	go build -v ./cmd/staticlint
-	./staticlint ./...
 
 .PHONY: test
 test:
-	#./staticlint ./...
-	go test -v ./... -count 1
+	go test -v ./...
+
+.PHONY: lint
+lint:
+	./staticlint ./...
 
 .PHONY: load
 load:
