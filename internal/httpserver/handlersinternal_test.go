@@ -1,5 +1,6 @@
 package httpserver
 
+//goland:noinspection ALL
 import (
 	"bytes"
 	"context"
@@ -329,8 +330,8 @@ func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
 
 	storage := mock_store.NewMockStore(ctrl)
 
-	server, afterFunc := TestServer(t, storage)
-	defer afterFunc()
+	server, td := TestServer(t, storage)
+	defer require.NoError(t, td())
 
 	data := `["1", "2", "3"]`
 
@@ -344,6 +345,7 @@ func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
 		URLsBulkDelete(gomock.Any(), gomock.Any()).
 		Return(nil).
 		AnyTimes()
+
 	server.handleURLBulkDelete(w, r)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 }
@@ -353,8 +355,8 @@ func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	storage := mock_store.NewMockStore(ctrl)
 
-	server, afterFunc := TestServer(t, storage)
-	defer afterFunc()
+	server, td := TestServer(t, storage)
+	defer require.NoError(t, td())
 
 	data := `["1",`
 
@@ -368,6 +370,7 @@ func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
 		URLsBulkDelete(gomock.Any(), gomock.Any()).
 		Return(nil).
 		AnyTimes()
+
 	server.handleURLBulkDelete(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -375,8 +378,8 @@ func TestServer_handleURLBulkDelete_Negative(t *testing.T) {
 func TestServer_handlePingStore(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	storage := mock_store.NewMockStore(ctrl)
-	server, afterFunc := TestServer(t, storage)
-	defer afterFunc()
+	server, td := TestServer(t, storage)
+	defer require.NoError(t, td())
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/shorten/batch", nil)
@@ -388,6 +391,7 @@ func TestServer_handlePingStore(t *testing.T) {
 		Ping(gomock.Any()).
 		Return(nil).
 		AnyTimes()
+
 	server.handlePingStore(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
@@ -452,8 +456,8 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			storage := mock_store.NewMockStore(ctrl)
-			s, afterFunc := TestServer(t, storage)
-			defer afterFunc()
+			s, td := TestServer(t, storage)
+			defer require.NoError(t, td())
 
 			storage.
 				EXPECT().
@@ -514,8 +518,8 @@ func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			storage := mock_store.NewMockStore(ctrl)
 
-			server, afterFunc := TestServer(t, storage)
-			defer afterFunc()
+			server, td := TestServer(t, storage)
+			defer require.NoError(t, td())
 
 			storage.
 				EXPECT().

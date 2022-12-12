@@ -43,8 +43,9 @@ func New(config *Config, storage store.Store, l *logrus.Entry) *Server {
 	return s
 }
 
-func (s *Server) Close() {
+func (s *Server) Close() error {
 	s.poller.Close()
+	return s.store.Close()
 }
 
 // configureRoutes initialize all endpoints of server

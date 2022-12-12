@@ -141,6 +141,11 @@ func BenchmarkServer_handleURLBatchCreate(b *testing.B) {
 			logger.WithOutput(io.Discard),
 		)),
 	)
+	defer func() {
+		if err := s.Close(); err != nil {
+			b.Fatalf("close server: %v", err)
+		}
+	}()
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()

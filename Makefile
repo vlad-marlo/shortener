@@ -25,6 +25,8 @@ cover:
 	go test -coverpkg=./... -coverprofile=coverage.out ./...
 	go tool cover -func coverage.out
 
-
+.PHONY: lines
+lines:
+	git ls-files | xargs wc -l
 
 .DEFAULT_GOAL := build

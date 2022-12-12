@@ -22,7 +22,11 @@ func ExampleNew() {
 	}()
 	server := httpserver.New(config, storage, logrus.NewEntry(logrus.New()))
 	// always close server
-	defer server.Close()
+	defer func() {
+		if err := server.Close(); err != nil {
+			// some err handling
+		}
+	}()
 
 	go func() {
 		// start your http server

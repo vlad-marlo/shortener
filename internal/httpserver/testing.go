@@ -10,6 +10,7 @@ import (
 
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
+	mock_store "github.com/vlad-marlo/shortener/internal/store/mock"
 )
 
 var (
@@ -18,12 +19,15 @@ var (
 	l    *logrus.Entry
 )
 
-func TestServer(t *testing.T, storage store.Store) (*Server, func()) {
+func TestServer(t *testing.T, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
 		c = NewConfig()
 		l = logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard)))
 	})
 	t.Helper()
+	if s, ok := storage.(*mock_store.MockStore); ok {
+		s.EXPECT().Close().Return(nil).AnyTimes()
+	}
 	server := &Server{
 		logger: l,
 		store:  storage,

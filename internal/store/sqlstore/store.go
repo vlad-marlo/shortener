@@ -81,7 +81,7 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 	return nil
 }
 
-// GetByOriginalURL ...
+// GetByOriginalURL return url with original url which is provided in u.BaseURL.
 func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 	if err := s.DB.QueryRowContext(
 		ctx,
@@ -96,7 +96,7 @@ func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 	return nil
 }
 
-// GetByID ...
+// GetByID return url with provided url
 func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	u := &model.URL{}
 
@@ -119,7 +119,7 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	return u, nil
 }
 
-// GetAllUserURLs ...
+// GetAllUserURLs return all urls which are created by provided user.
 func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.URL, error) {
 	var urls []*model.URL
 
@@ -154,7 +154,7 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	return urls, nil
 }
 
-// URLsBulkCreate ...
+// URLsBulkCreate created records in db about urls which are provided in urls argument.
 func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	if len(urls) == 0 {
 		return nil, store.ErrNoContent
@@ -216,7 +216,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	return response, err
 }
 
-// URLsBulkDelete ...
+// URLsBulkDelete deletes all urls with ids provided in urls argument.
 func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 	ids := pq.Array(urls)
 	if _, err := s.DB.Exec(
@@ -229,12 +229,12 @@ func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 	return nil
 }
 
-// Ping ...
+// Ping verifies a connection to the database is still alive, establishing a connection if necessary.
 func (s *SQLStore) Ping(ctx context.Context) error {
 	return s.DB.PingContext(ctx)
 }
 
-// Close ...
+// Close closes the database and prevents new queries from starting.
 func (s *SQLStore) Close() error {
 	return s.DB.Close()
 }

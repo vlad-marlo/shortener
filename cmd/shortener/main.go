@@ -36,7 +36,6 @@ var (
 )
 
 func main() {
-	debugInfo()
 	storeLogger := createLogger("storage")
 	serverLogger := createLogger("server")
 
@@ -52,9 +51,14 @@ func main() {
 			storeLogger.Panicf("close server: %v", err)
 		}
 	}()
+	debugInfo()
 
 	s := httpserver.New(config, storage, serverLogger)
-	defer s.Close()
+	defer func() {
+		if err := s.Close(); err != nil {
+			serverLogger.Fatal(fmt.Sprintf("close server: %v", err))
+		}
+	}()
 	serverLogger.WithFields(map[string]interface{}{
 		"bind_addr": config.BindAddr,
 	}).Info("successfully init server")
@@ -102,6 +106,7 @@ func createLogger(name string) *logrus.Entry {
 	})
 }
 
+// initStorage is abstract factory to create new storage object with provided config.
 func initStorage(cfg *httpserver.Config, logger *logrus.Entry) (storage store.Store, err error) {
 	switch cfg.StorageType {
 	case store.InMemoryStorage:
@@ -116,6 +121,7 @@ func initStorage(cfg *httpserver.Config, logger *logrus.Entry) (storage store.St
 	return
 }
 
+// debugInfo ...
 func debugInfo() {
 	fmt.Printf("Build version: %s \nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 }
