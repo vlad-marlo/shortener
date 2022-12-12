@@ -466,11 +466,10 @@ func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
 				AnyTimes()
 
 			w := httptest.NewRecorder()
+			defer assert.NoError(t, w.Result().Body.Close())
+
 			r := httptest.NewRequest("POST", "/", strings.NewReader(tc.data))
-			defer func() {
-				assert.NoError(t, w.Result().Body.Close())
-				assert.NoError(t, r.Body.Close())
-			}()
+			defer assert.NoError(t, r.Body.Close())
 
 			s.handleURLBulkCreate(w, r)
 			var resp []*model.BatchCreateURLsResponse

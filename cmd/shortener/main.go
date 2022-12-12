@@ -45,12 +45,6 @@ func main() {
 	if err != nil {
 		serverLogger.Panicf("init storage: %v", err)
 	}
-
-	defer func() {
-		if err := storage.Close(); err != nil {
-			storeLogger.Panicf("close server: %v", err)
-		}
-	}()
 	debugInfo()
 
 	s := httpserver.New(config, storage, serverLogger)

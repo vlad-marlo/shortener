@@ -43,6 +43,7 @@ func New(config *Config, storage store.Store, l *logrus.Entry) *Server {
 	return s
 }
 
+// Close closes poller and storage connection.
 func (s *Server) Close() error {
 	s.poller.Close()
 	return s.store.Close()
