@@ -53,8 +53,10 @@ func main() {
 			serverLogger.Fatal(fmt.Sprintf("close server: %v", err))
 		}
 	}()
+
 	serverLogger.WithFields(map[string]interface{}{
-		"bind_addr": config.BindAddr,
+		"bind_addr":    config.BindAddr,
+		"storage_type": config.StorageType,
 	}).Info("successfully init server")
 
 	go func() {
@@ -102,6 +104,11 @@ func createLogger(name string) *logrus.Entry {
 
 // initStorage is abstract factory to create new storage object with provided config.
 func initStorage(cfg *httpserver.Config, logger *logrus.Entry) (storage store.Store, err error) {
+	logger.WithFields(logrus.Fields{
+		"filename":     cfg.FilePath,
+		"database":     cfg.Database,
+		"storage_type": cfg.StorageType,
+	}).Info("trace config vars")
 	switch cfg.StorageType {
 	case store.InMemoryStorage:
 		storage = inmemory.New()

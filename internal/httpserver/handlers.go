@@ -1,13 +1,11 @@
 package httpserver
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -15,10 +13,6 @@ import (
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
-)
-
-const (
-	cancelCoolDown = 30 * time.Millisecond
 )
 
 // handleURLGet is redirecting user to base url with id which is provided in url path by chi url params.
@@ -32,9 +26,6 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
-
-	ctx, cancel := context.WithTimeout(ctx, cancelCoolDown)
-	defer cancel()
 
 	url, err := s.store.GetByID(ctx, id)
 	if errors.Is(err, store.ErrIsDeleted) {
@@ -87,8 +78,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
-	defer cancel()
+	ctx := r.Context()
 
 	if err = s.store.Create(ctx, u); err != nil {
 		if errors.Is(err, store.ErrAlreadyExists) {
@@ -141,8 +131,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
-	defer cancel()
+	ctx := r.Context()
 
 	w.Header().Set("Content-Type", "application/json")
 	if err = s.store.Create(ctx, u); errors.Is(err, store.ErrAlreadyExists) {
@@ -172,8 +161,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := getUserFromRequest(r)
 
-	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
-	defer cancel()
+	ctx := r.Context()
 
 	urls, err := s.store.GetAllUserURLs(ctx, userID)
 	if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
@@ -211,8 +199,7 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]interface{}{
 		"request_id": middleware.GetReqID(r.Context()),
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), cancelCoolDown)
-	defer cancel()
+	ctx := r.Context()
 
 	if err := s.store.Ping(ctx); err != nil {
 		s.handleErrorOrStatus(w, fmt.Errorf("handlePingStore: %w", err), fields, http.StatusInternalServerError)
@@ -263,8 +250,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(len(urls))*cancelCoolDown)
-	defer cancel()
+	ctx := r.Context()
 
 	resp, err := s.store.URLsBulkCreate(ctx, urls)
 	if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
