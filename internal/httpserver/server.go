@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddlewares "github.com/go-chi/chi/v5/middleware"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
@@ -19,12 +19,12 @@ type Server struct {
 	store  store.Store
 	config *Config
 	poller *poll.Poll
-	logger *logrus.Entry
+	logger *zap.Logger
 }
 
 // New return new configured server with params from config object
 // need for creating only one connection to db
-func New(config *Config, storage store.Store, l *logrus.Entry) *Server {
+func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),

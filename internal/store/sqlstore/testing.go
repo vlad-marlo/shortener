@@ -4,14 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vlad-marlo/logger"
+	"go.uber.org/zap"
 )
 
 func TestStore(t *testing.T) (*SQLStore, func(t *testing.T)) {
@@ -28,7 +26,8 @@ func TestStore(t *testing.T) (*SQLStore, func(t *testing.T)) {
 		t.Skipf("db is not accessible: %v", err)
 	}
 
-	storage, err := New(context.Background(), dns, logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard))), db)
+	l, _ := zap.NewProduction()
+	storage, err := New(context.Background(), dns, l, db)
 	require.NoError(t, err, fmt.Sprintf("init db storage: %v", err))
 
 	return storage, func(t *testing.T) {

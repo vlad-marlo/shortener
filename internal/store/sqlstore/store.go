@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -15,11 +15,11 @@ import (
 
 type SQLStore struct {
 	DB *sql.DB
-	l  *logrus.Entry
+	l  *zap.Logger
 }
 
-// New ...
-func New(ctx context.Context, connectString string, l *logrus.Entry, db *sql.DB) (s *SQLStore, err error) {
+// New create new connection to db with provided connection string. If db is not nil than will be used it as db.
+func New(ctx context.Context, connectString string, l *zap.Logger, db *sql.DB) (s *SQLStore, err error) {
 	if db == nil {
 		db, err = sql.Open("postgres", connectString)
 		if err != nil {
@@ -136,7 +136,7 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	}
 	defer func(r *sql.Rows) {
 		if err := r.Close(); err != nil {
-			s.l.Warnf("closing rows: %v", err)
+			s.l.Warn(fmt.Sprintf("closing rows: %v", err))
 		}
 	}(r)
 
@@ -171,7 +171,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	// rollback if something went wrong
 	defer func() {
 		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			s.l.Errorf("update drivers: unable to rollback: %v", err)
+			s.l.Error(fmt.Sprintf("update drivers: unable to rollback: %v", err))
 		}
 	}()
 
@@ -182,7 +182,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	defer func() {
 		if err = stmt.Close(); err != nil && err != sql.ErrTxDone {
-			s.l.Errorf("update drivers: unable to close stmt: %v", err)
+			s.l.Error(fmt.Sprintf("update drivers: unable to close stmt: %v", err))
 		}
 	}()
 
@@ -209,7 +209,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		)
 	}
 	if err = tx.Commit(); err != nil {
-		s.l.Errorf("update drivers: unable to commit: %v", err)
+		s.l.Error(fmt.Sprintf("update drivers: unable to commit: %v", err))
 		return nil, err
 	}
 

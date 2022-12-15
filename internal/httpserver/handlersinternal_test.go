@@ -14,9 +14,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -114,11 +114,12 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 	}
 
 	storage := inmemory.New()
+	l, _ := zap.NewProduction()
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, logrus.NewEntry(logrus.New()))
+	}, storage, l)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -186,11 +187,12 @@ func TestServer_HandleURLGet(t *testing.T) {
 	}
 
 	storage := inmemory.New()
+	l, _ := zap.NewProduction()
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, logrus.NewEntry(logrus.New()))
+	}, storage, l)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -283,11 +285,12 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 	}
 
 	storage := inmemory.New()
+	l, _ := zap.NewProduction()
 	s := New(&Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, logrus.NewEntry(logrus.New()))
+	}, storage, l)
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -396,105 +399,105 @@ func TestServer_handlePingStore(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
-	type args struct {
-		urls []*model.BatchCreateURLsResponse
-		err  error
-	}
-	type want struct {
-		statusCode int
-		data       []string
-	}
-	tt := []struct {
-		name string
-		data string
-		args args
-		want want
-	}{
-		// {
-		// 	name: "positive case #1",
-		// 	data: `[{ "correlation_id": "a", "original_url": "https://ya.ru" }, { "correlation_id": "b", "original_url": "https://yandex.ru" }]`,
-		// 	args: args{
-		// 		urls: []*model.BatchCreateURLsResponse{
-		// 			{
-		// 				ShortURL:      "a",
-		// 				CorrelationID: "a",
-		// 			},
-		// 			{
-		// 				ShortURL:      "b",
-		// 				CorrelationID: "b",
-		// 			},
-		// 		},
-		// 		err: nil,
-		// 	},
-		// 	want: want{
-		// 		statusCode: http.StatusCreated,
-		// 		data:       []string{"a", "b"},
-		// 	},
-		// },
-		// {
-		// 	name: "negative case #1",
-		// 	data: `[]`,
-		// 	args: args{
-		// 		urls: nil,
-		// 		err:  store.ErrAlreadyExists,
-		// 	},
-		// 	want: want{
-		// 		data:       nil,
-		// 		statusCode: http.StatusBadRequest,
-		// 	},
-		// },
-		// {
-		// 	name: "negative case #2",
-		// 	data: `[]`,
-		// 	args: args{
-		// 		urls: nil,
-		// 		err:  store.ErrAlreadyExists,
-		// 	},
-		// 	want: want{
-		// 		data:       nil,
-		// 		statusCode: http.StatusBadRequest,
-		// 	},
-		// },
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			storage := mock_store.NewMockStore(ctrl)
-
-			s, td := TestServer(t, storage)
-			defer require.NoError(t, td())
-
-			storage.
-				EXPECT().
-				URLsBulkCreate(gomock.Any(), gomock.Any()).
-				Return(tc.args.urls, tc.args.err).
-				AnyTimes()
-
-			w := httptest.NewRecorder()
-			defer assert.NoError(t, w.Result().Body.Close())
-
-			r := httptest.NewRequest("POST", "/", strings.NewReader(tc.data))
-			defer assert.NoError(t, r.Body.Close())
-
-			s.handleURLBulkCreate(w, r)
-			res := w.Result()
-			defer assert.NoError(t, res.Body.Close())
-			assert.Equal(t, tc.want.statusCode, res.StatusCode)
-			if tc.want.statusCode != http.StatusCreated {
-				return
-			}
-
-			var resp []*model.BatchCreateURLsResponse
-			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-
-			require.Contains(t, "application/json", res.Header.Get("content-type"))
-			for _, m := range resp {
-				assert.Contains(t, tc.want.data, m.CorrelationID, "xdddddd", tc.want.data, resp)
-			}
-		})
-	}
-}
+// func TestServer_handleURLBulkCreate_Positive(t *testing.T) {
+// 	type args struct {
+// 		urls []*model.BatchCreateURLsResponse
+// 		err  error
+// 	}
+// 	type want struct {
+// 		statusCode int
+// 		data       []string
+// 	}
+// 	tt := []struct {
+// 		name string
+// 		data string
+// 		args args
+// 		want want
+// 	}{
+// 		// {
+// 		// 	name: "positive case #1",
+// 		// 	data: `[{ "correlation_id": "a", "original_url": "https://ya.ru" }, { "correlation_id": "b", "original_url": "https://yandex.ru" }]`,
+// 		// 	args: args{
+// 		// 		urls: []*model.BatchCreateURLsResponse{
+// 		// 			{
+// 		// 				ShortURL:      "a",
+// 		// 				CorrelationID: "a",
+// 		// 			},
+// 		// 			{
+// 		// 				ShortURL:      "b",
+// 		// 				CorrelationID: "b",
+// 		// 			},
+// 		// 		},
+// 		// 		err: nil,
+// 		// 	},
+// 		// 	want: want{
+// 		// 		statusCode: http.StatusCreated,
+// 		// 		data:       []string{"a", "b"},
+// 		// 	},
+// 		// },
+// 		// {
+// 		// 	name: "negative case #1",
+// 		// 	data: `[]`,
+// 		// 	args: args{
+// 		// 		urls: nil,
+// 		// 		err:  store.ErrAlreadyExists,
+// 		// 	},
+// 		// 	want: want{
+// 		// 		data:       nil,
+// 		// 		statusCode: http.StatusBadRequest,
+// 		// 	},
+// 		// },
+// 		// {
+// 		// 	name: "negative case #2",
+// 		// 	data: `[]`,
+// 		// 	args: args{
+// 		// 		urls: nil,
+// 		// 		err:  store.ErrAlreadyExists,
+// 		// 	},
+// 		// 	want: want{
+// 		// 		data:       nil,
+// 		// 		statusCode: http.StatusBadRequest,
+// 		// 	},
+// 		// },
+// 	}
+// 	for _, tc := range tt {
+// 		t.Run(tc.name, func(t *testing.T) {
+// 			ctrl := gomock.NewController(t)
+// 			storage := mock_store.NewMockStore(ctrl)
+//
+// 			s, td := TestServer(t, storage)
+// 			defer require.NoError(t, td())
+//
+// 			storage.
+// 				EXPECT().
+// 				URLsBulkCreate(gomock.Any(), gomock.Any()).
+// 				Return(tc.args.urls, tc.args.err).
+// 				AnyTimes()
+//
+// 			w := httptest.NewRecorder()
+// 			defer assert.NoError(t, w.Result().Body.Close())
+//
+// 			r := httptest.NewRequest("POST", "/", strings.NewReader(tc.data))
+// 			defer assert.NoError(t, r.Body.Close())
+//
+// 			s.handleURLBulkCreate(w, r)
+// 			res := w.Result()
+// 			defer assert.NoError(t, res.Body.Close())
+// 			assert.Equal(t, tc.want.statusCode, res.StatusCode)
+// 			if tc.want.statusCode != http.StatusCreated {
+// 				return
+// 			}
+//
+// 			var resp []*model.BatchCreateURLsResponse
+// 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+//
+// 			require.Contains(t, "application/json", res.Header.Get("content-type"))
+// 			for _, m := range resp {
+// 				assert.Contains(t, tc.want.data, m.CorrelationID, "xdddddd", tc.want.data, resp)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 	data := map[string][]*model.URL{

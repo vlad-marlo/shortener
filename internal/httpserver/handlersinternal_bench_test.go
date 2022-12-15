@@ -1,15 +1,13 @@
 package httpserver
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-	"github.com/vlad-marlo/logger"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
@@ -18,6 +16,7 @@ import (
 
 func BenchmarkServer_handleURLGet(b *testing.B) {
 	storage := inmemory.New()
+	l, _ := zap.NewProduction()
 	s := New(
 		&Config{
 			BaseURL:     "http://localhost:8080",
@@ -25,9 +24,7 @@ func BenchmarkServer_handleURLGet(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logrus.NewEntry(logger.WithOpts(
-			logger.WithOutput(io.Discard),
-		)),
+		l,
 	)
 
 	ts := httptest.NewServer(s.Router)
@@ -56,6 +53,7 @@ func BenchmarkServer_handleURLGet(b *testing.B) {
 
 func BenchmarkServer_handleURLPost(b *testing.B) {
 	storage := inmemory.New()
+	l, _ := zap.NewProduction()
 	s := New(
 		&Config{
 			BaseURL:     "http://localhost:8080",
@@ -63,9 +61,7 @@ func BenchmarkServer_handleURLPost(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logrus.NewEntry(logger.WithOpts(
-			logger.WithOutput(io.Discard),
-		)),
+		l,
 	)
 
 	ts := httptest.NewServer(s.Router)
@@ -94,6 +90,10 @@ func BenchmarkServer_handleURLPost(b *testing.B) {
 
 func BenchmarkServer_handleURLPostJSON(b *testing.B) {
 	storage := inmemory.New()
+	l, err := zap.NewProduction()
+	if err != nil {
+		b.Fatalf("zap new production: %v", err)
+	}
 	s := New(
 		&Config{
 			BaseURL:     "http://localhost:8080",
@@ -101,9 +101,7 @@ func BenchmarkServer_handleURLPostJSON(b *testing.B) {
 			StorageType: store.InMemoryStorage,
 		},
 		storage,
-		logrus.NewEntry(logger.WithOpts(
-			logger.WithOutput(io.Discard),
-		)),
+		l,
 	)
 
 	ts := httptest.NewServer(s.Router)

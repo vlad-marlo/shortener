@@ -1,11 +1,9 @@
 package httpserver
 
 import (
-	"io"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-	"github.com/vlad-marlo/logger"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -15,13 +13,13 @@ import (
 var (
 	once sync.Once
 	c    *Config
-	l    *logrus.Entry
+	l    *zap.Logger
 )
 
 func TestServer(t interface{ Helper() }, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
 		c = NewConfig()
-		l = logrus.NewEntry(logger.WithOpts(logger.WithOutput(io.Discard)))
+		l, _ = zap.NewProduction()
 	})
 	t.Helper()
 	if s, ok := storage.(*mock_store.MockStore); ok {

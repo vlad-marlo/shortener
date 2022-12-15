@@ -3,16 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/sirupsen/logrus"
-	log "github.com/vlad-marlo/logger"
-	"github.com/vlad-marlo/logger/hook"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	_ "github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
@@ -24,26 +21,33 @@ import (
 )
 
 var (
-	logLevel            = logrus.TraceLevel
-	logOutput           = io.Discard
-	logDir              = "logs"
-	logDefaultFormatter = log.JSONFormatter
-	logFormatter        *logrus.Formatter
-	buildVersion        = "N/A"
-	buildDate           = "N/A"
-	buildCommit         = "N/A"
-	logFileNameFormat   = "2006-January-02-15"
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
 )
 
 func main() {
-	storeLogger := createLogger("storage")
-	serverLogger := createLogger("server")
+	storeLogger, err := createLogger("storage")
+	if err != nil {
+		panic(fmt.Sprintf("init strorage logger: %v", err))
+	}
+	defer func() {
+		_ = storeLogger.Sync()
+	}()
+
+	serverLogger, err := createLogger("server")
+	if err != nil {
+		panic(fmt.Sprintf("init server logger: %v", err))
+	}
+	defer func() {
+		_ = storeLogger.Sync()
+	}()
 
 	config := httpserver.NewConfig()
 
 	storage, err := initStorage(config, storeLogger)
 	if err != nil {
-		serverLogger.Panicf("init storage: %v", err)
+		serverLogger.Fatal(fmt.Sprintf("init storage: %v", err))
 	}
 	debugInfo()
 
@@ -54,61 +58,62 @@ func main() {
 		}
 	}()
 
-	serverLogger.WithFields(map[string]interface{}{
-		"bind_addr":    config.BindAddr,
-		"storage_type": config.StorageType,
-	}).Info("successfully init server")
+	serverLogger.Info(
+		"successfully init server",
+		zap.String("bind_addr", config.BindAddr),
+		zap.String("storage_type", config.StorageType),
+	)
 
 	go func() {
 		// logging fatal because listen and server always return not-nil error
-		serverLogger.Panicf("listen and server server: %v", s.ListenAndServe())
+		serverLogger.Fatal(fmt.Sprintf("listen and server server: %v", s.ListenAndServe()))
 	}()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-interrupt
-	serverLogger.WithFields(map[string]interface{}{
-		"signal": sig.String(),
-	}).Info("graceful shut down")
+	serverLogger.Info(
+		"graceful shut down",
+		zap.String("signal", sig.String()),
+	)
 }
 
 // createLogger creates new named logger with stdout and file output.
-func createLogger(name string) *logrus.Entry {
-	opts := []log.OptFunc{
-		log.WithOutput(logOutput),
-		log.WithLevel(logLevel),
-		log.WithReportCaller(true),
-		log.WithDefaultFormatter(logDefaultFormatter),
-		log.WithHook(
-			hook.New(
-				logrus.AllLevels,
-				[]io.Writer{os.Stdout},
-				hook.WithFileOutput(
-					logDir,
-					name,
-					time.Now().Format(logFileNameFormat),
-				),
-			),
-		),
-	}
-	if logFormatter != nil {
-		opts = append(opts, log.WithFormatter(*logFormatter))
-	}
+func createLogger(name string) (*zap.Logger, error) {
 
-	return log.WithOpts(opts...).WithFields(logrus.Fields{
-		"build_version": buildVersion,
-		"build_commit":  buildCommit,
-		"build_date":    buildDate,
+	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.ErrorLevel
 	})
+	lowPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl < zapcore.ErrorLevel
+	})
+
+	consoleDebugging := zapcore.Lock(os.Stdout)
+	consoleErrors := zapcore.Lock(os.Stderr)
+
+	jsonEncoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	// textEncoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+
+	core := zapcore.NewTee(
+		zapcore.NewCore(jsonEncoder, consoleErrors, highPriority),
+		zapcore.NewCore(jsonEncoder, consoleDebugging, lowPriority),
+	)
+
+	logger := zap.
+		New(core).
+		With(zap.String("name", name))
+	return logger, nil
 }
 
 // initStorage is abstract factory to create new storage object with provided config.
-func initStorage(cfg *httpserver.Config, logger *logrus.Entry) (storage store.Store, err error) {
-	logger.WithFields(logrus.Fields{
-		"filename":     cfg.FilePath,
-		"database":     cfg.Database,
-		"storage_type": cfg.StorageType,
-	}).Info("trace config vars")
+func initStorage(cfg *httpserver.Config, logger *zap.Logger) (storage store.Store, err error) {
+	logger.Debug(
+		"trace config vars",
+		zap.Bool("filename_provided", cfg.FilePath != ""),
+		zap.Bool("db_uri_provided", cfg.Database != ""),
+		zap.Bool("storage_type_provided", cfg.StorageType != ""),
+	)
+
 	switch cfg.StorageType {
 	case store.InMemoryStorage:
 		storage = inmemory.New()

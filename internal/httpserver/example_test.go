@@ -3,7 +3,7 @@ package httpserver_test
 import (
 	"net/http"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
@@ -20,7 +20,8 @@ func ExampleNew() {
 			// ...
 		}
 	}()
-	server := httpserver.New(config, storage, logrus.NewEntry(logrus.New()))
+	l, _ := zap.NewProduction()
+	server := httpserver.New(config, storage, l)
 	// always close server
 	defer func() {
 		if err := server.Close(); err != nil {
