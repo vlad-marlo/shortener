@@ -3,8 +3,6 @@ package httpserver
 import (
 	"flag"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/caarlos0/env/v6"
 
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -19,10 +17,10 @@ type Config struct {
 }
 
 // NewConfig return pointer to config with params. Empty params will be set by default
-func NewConfig() *Config {
+func NewConfig() (*Config, error) {
 	c := &Config{}
 	if err := env.Parse(c); err != nil {
-		log.Panicf("env parse: %v", err)
+		return nil, err
 	}
 	flag.StringVar(&c.BindAddr, "a", c.BindAddr, "server will be started with this url")
 	flag.StringVar(&c.BaseURL, "b", c.BaseURL, "url will be used in generation of shorten url")
@@ -37,5 +35,5 @@ func NewConfig() *Config {
 	} else {
 		c.StorageType = store.InMemoryStorage
 	}
-	return c
+	return c, nil
 }

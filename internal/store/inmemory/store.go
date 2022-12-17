@@ -46,6 +46,7 @@ func (s *Store) Create(ctx context.Context, u *model.URL) (err error) {
 		return fmt.Errorf("validate url: %w", err)
 	}
 
+	s.mu.Lock()
 	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
 		if err = ctx.Err(); err != nil {
 			return fmt.Errorf("context err: %w", err)
@@ -56,7 +57,6 @@ func (s *Store) Create(ctx context.Context, u *model.URL) (err error) {
 		}
 	}
 
-	s.mu.Lock()
 	s.urls[u.ID] = u
 	s.mu.Unlock()
 	return
@@ -64,11 +64,11 @@ func (s *Store) Create(ctx context.Context, u *model.URL) (err error) {
 
 // GetAllUserURLs ...
 func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.URL, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, u := range s.urls {
 		if u.User == user {
-			s.mu.Lock()
 			urls = append(urls, u)
-			s.mu.Unlock()
 		}
 	}
 	return
@@ -102,11 +102,11 @@ func (s *Store) URLsBulkCreate(ctx context.Context, urls []*model.URL) (res []*m
 
 // URLsBulkDelete ...
 func (s *Store) URLsBulkDelete(urls []string, user string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, u := range urls {
 		if url := s.urls[u]; url.User == user {
-			s.mu.Lock()
 			url.IsDeleted = true
-			s.mu.Unlock()
 		}
 	}
 	return nil
@@ -126,10 +126,14 @@ func (s *Store) Ping(_ context.Context) error {
 // Close ...
 func (s *Store) Close() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.closed {
+
+	ok := s.closed
+	s.closed = true
+
+	s.mu.Unlock()
+
+	if ok {
 		return store.ErrAlreadyClosed
 	}
-	s.closed = true
 	return nil
 }

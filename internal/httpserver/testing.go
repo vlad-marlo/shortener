@@ -19,11 +19,16 @@ var (
 // TestI is giving access to all objects like *testing.B *testing.T in helper functions.
 type TestI interface {
 	Helper()
+	Fatalf(format string, args ...any)
 }
 
 func TestServer(t TestI, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
-		c = NewConfig()
+		var err error
+		c, err = NewConfig()
+		if err != nil {
+			t.Fatalf("init test config: %v", err)
+		}
 		l, _ = zap.NewProduction()
 	})
 	t.Helper()

@@ -53,20 +53,25 @@ func (p *Poll) startPolling() {
 		case <-p.stop:
 			return
 		case t := <-p.input:
+			p.logger.Debug(
+				"poll: got new task",
+				zap.Strings("ids", t.ids),
+				zap.String("user", t.user),
+			)
 			if err := p.store.URLsBulkDelete(t.ids, t.user); err != nil {
 				p.logger.Warn(
 					fmt.Sprintf("poll: start_polling: %v", err),
 					zap.String("user", t.user),
 					zap.Strings("ids", t.ids),
 				)
+				continue
 			}
+			p.logger.Debug("successfully done task")
 		}
 	}
 }
 
 func (p *Poll) Close() {
-	p.logger.Info(
-		"close poller queue",
-	)
+	p.logger.Info("close poller queue")
 	close(p.stop)
 }
