@@ -40,10 +40,13 @@ func main() {
 		panic(fmt.Sprintf("init server logger: %v", err))
 	}
 	defer func() {
-		_ = storeLogger.Sync()
+		_ = serverLogger.Sync()
 	}()
 
-	config := httpserver.NewConfig()
+	config, err := httpserver.NewConfig()
+	if err != nil {
+		serverLogger.Fatal(fmt.Sprintf("init config: %v", err))
+	}
 
 	storage, err := initStorage(config, storeLogger)
 	if err != nil {

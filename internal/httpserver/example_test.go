@@ -11,7 +11,10 @@ import (
 
 func ExampleNew() {
 	// parse server config
-	config := httpserver.NewConfig()
+	config, err := httpserver.NewConfig()
+	// always check error
+	if err != nil {
+	}
 	// create some storage; for example inmemory
 	storage := inmemory.New()
 	defer func() {
