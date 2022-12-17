@@ -1,11 +1,16 @@
 package poll_test
 
-import "github.com/vlad-marlo/shortener/internal/poll"
+import (
+	"go.uber.org/zap"
+
+	"github.com/vlad-marlo/shortener/internal/poll"
+)
 
 func Example() {
 	// ...
 	// init poller
-	poller := poll.New(nil)
+	logger, _ := zap.NewProduction()
+	poller := poll.New(nil, logger)
 	// always defer poller close
 	defer poller.Close()
 }

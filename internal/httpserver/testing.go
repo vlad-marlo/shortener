@@ -16,7 +16,12 @@ var (
 	l    *zap.Logger
 )
 
-func TestServer(t interface{ Helper() }, storage store.Store) (*Server, func() error) {
+// TestI is giving access to all objects like *testing.B *testing.T in helper functions.
+type TestI interface {
+	Helper()
+}
+
+func TestServer(t TestI, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
 		c = NewConfig()
 		l, _ = zap.NewProduction()
@@ -29,7 +34,7 @@ func TestServer(t interface{ Helper() }, storage store.Store) (*Server, func() e
 		logger: l,
 		store:  storage,
 		config: c,
-		poller: poll.New(storage),
+		poller: poll.New(storage, l),
 	}
 	return server, server.Close
 }

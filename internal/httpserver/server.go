@@ -30,7 +30,7 @@ func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 		Router: chi.NewRouter(),
 		logger: l,
 		store:  storage,
-		poller: poll.New(storage),
+		poller: poll.New(storage, l),
 	}
 	s.configureMiddlewares()
 	l.Info("middleware configured successfully")

@@ -213,11 +213,12 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			URL string `json:"url"`
 		}
 		response struct {
-			Result string `json:"result"`
+			URL string `json:"result"`
 		}
 		args struct {
-			urlPath string
-			request request
+			request      request
+			prepareStore func(s *mock_store.MockStore)
+			id           string
 		}
 		want struct {
 			wantInternalServerError bool
@@ -233,96 +234,100 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 		{
 			name: "positive case #1",
 			args: args{
-				urlPath: "/api/shorten",
 				request: request{
 					URL: "https://www.google.com",
 				},
+				prepareStore: func(s *mock_store.MockStore) {
+					s.EXPECT().
+						Create(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(arg0 context.Context, arg1 *model.URL) error {
+							arg1.ID = "a"
+							return nil
+						}).
+						AnyTimes()
+				},
+				id: "a",
 			},
+
 			want: want{
 				wantInternalServerError: false,
 				status:                  http.StatusCreated,
 			},
 		},
-		{
-			name: "positive case #2",
-			args: args{
-				urlPath: "/api/shorten",
-				request: request{
-					URL: "https://ya.ru",
-				},
-			},
-			want: want{
-				wantInternalServerError: false,
-				status:                  http.StatusCreated,
-			},
-		},
-		{
-			name: "incorrect url to short",
-			args: args{
-				urlPath: "/api/shorten",
-				request: request{
-					URL: "https://hlt v.org",
-				},
-			},
-			want: want{
-				wantInternalServerError: true,
-				status:                  http.StatusBadRequest,
-			},
-		},
-		{
-			name: "empty data",
-			args: args{
-				urlPath: "/api/shorten",
-				request: request{
-					URL: "",
-				},
-			},
-			want: want{
-				wantInternalServerError: true,
-				status:                  http.StatusBadRequest,
-			},
-		},
+		// {
+		// 	name: "positive case #2",
+		// 	args: args{
+		// 		urlPath: "/api/shorten",
+		// 		request: request{
+		// 			URL: "https://ya.ru",
+		// 		},
+		// 	},
+		// 	want: want{
+		// 		wantInternalServerError: false,
+		// 		status:                  http.StatusCreated,
+		// 	},
+		// },
+		// {
+		// 	name: "incorrect url to short",
+		// 	args: args{
+		// 		urlPath: "/api/shorten",
+		// 		request: request{
+		// 			URL: "https://hlt v.org",
+		// 		},
+		// 	},
+		// 	want: want{
+		// 		wantInternalServerError: true,
+		// 		status:                  http.StatusBadRequest,
+		// 	},
+		// },
+		// {
+		// 	name: "empty data",
+		// 	args: args{
+		// 		urlPath: "/api/shorten",
+		// 		request: request{
+		// 			URL: "",
+		// 		},
+		// 	},
+		// 	want: want{
+		// 		wantInternalServerError: true,
+		// 		status:                  http.StatusBadRequest,
+		// 	},
+		// },
 	}
-
-	storage := inmemory.New()
-	l, _ := zap.NewProduction()
-	s := New(&Config{
-		BaseURL:     "http://localhost:8080",
-		BindAddr:    "localhost:8080",
-		StorageType: store.InMemoryStorage,
-	}, storage, l)
-
-	ts := httptest.NewServer(s.Router)
-	defer ts.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var resp response
+			ctrl := gomock.NewController(t)
+			storage := mock_store.NewMockStore(ctrl)
+			tt.args.prepareStore(storage)
+
+			s, td := TestServer(t, storage)
+			defer require.NoError(t, td())
+
 			data, err := json.Marshal(tt.args.request)
 			require.NoError(t, err)
-			body := bytes.NewReader(data)
-			res, url := testRequest(
-				t,
-				ts,
-				http.MethodPost,
-				tt.args.urlPath,
-				body,
-			)
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(data))
+
+			s.handleURLCreateJSON(w, r)
+			res := w.Result()
 			defer require.NoError(t, res.Body.Close())
-			_ = json.Unmarshal(url, &resp)
+			defer require.NoError(t, r.Body.Close())
 
 			assert.Equal(t, tt.want.status, res.StatusCode)
 			if tt.want.wantInternalServerError {
 				return
 			}
 
-			require.NotEmpty(t, resp.Result, "response body must be not empty")
+			require.NotEmpty(t, w.Body.String(), "response body must be not empty")
+			// t.Log(w.Body.String())
+			var result response
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+			// t.Logf("%+v", result)
 
-			id := strings.TrimPrefix(resp.Result, "http://localhost:8080")
-			res, _ = testRequest(t, ts, http.MethodGet, id, nil)
-			defer require.NoError(t, res.Body.Close())
-
-			require.Contains(t, res.Request.URL.String(), tt.args.request.URL)
+			id := strings.TrimPrefix(result.URL, "http://localhost:8080/")
+			require.Equal(t, tt.args.id, id)
 		})
 	}
 }
@@ -330,7 +335,6 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 // TestServer_handleURLBulkDelete_Positive ...
 func TestServer_handleURLBulkDelete_Positive(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
 	storage := mock_store.NewMockStore(ctrl)
 
 	server, td := TestServer(t, storage)
