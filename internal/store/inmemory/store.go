@@ -71,9 +71,6 @@ func (s *Store) GetAllUserURLs(_ context.Context, user string) (urls []*model.UR
 			urls = append(urls, u)
 		}
 	}
-	if len(urls) == 0 {
-		return nil, store.ErrNoContent
-	}
 	return
 }
 
