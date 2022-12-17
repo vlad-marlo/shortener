@@ -52,7 +52,6 @@ func main() {
 	if err != nil {
 		serverLogger.Fatal(fmt.Sprintf("init storage: %v", err))
 	}
-	debugInfo()
 
 	s := httpserver.New(config, storage, serverLogger)
 	defer func() {
@@ -102,9 +101,11 @@ func createLogger(name string) (*zap.Logger, error) {
 		zapcore.NewCore(jsonEncoder, consoleDebugging, lowPriority),
 	)
 
+	f := TraceFields()
+	f = append(f, zap.String("name", name))
 	logger := zap.
 		New(core).
-		With(zap.String("name", name))
+		With(f...)
 	return logger, nil
 }
 
@@ -114,7 +115,7 @@ func initStorage(cfg *httpserver.Config, logger *zap.Logger) (storage store.Stor
 		"trace config vars",
 		zap.Bool("filename_provided", cfg.FilePath != ""),
 		zap.Bool("db_uri_provided", cfg.Database != ""),
-		zap.Bool("storage_type_provided", cfg.StorageType != ""),
+		zap.String("storage_type", cfg.StorageType),
 	)
 
 	switch cfg.StorageType {
@@ -130,7 +131,11 @@ func initStorage(cfg *httpserver.Config, logger *zap.Logger) (storage store.Stor
 	return
 }
 
-// debugInfo ...
-func debugInfo() {
-	fmt.Printf("Build version: %s \nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
+// TraceFields ...
+func TraceFields() []zap.Field {
+	return []zap.Field{
+		zap.String("build version", buildVersion),
+		zap.String("build date", buildDate),
+		zap.String("build commit", buildCommit),
+	}
 }

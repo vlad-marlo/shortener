@@ -22,7 +22,7 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(ctx)
 	fields := []zap.Field{
 		zap.String("request_id", reqID),
-		zap.String("handler", "url get"),
+		zap.String("handler", "get url by id"),
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
@@ -59,7 +59,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if err = r.Body.Close(); err != nil {
-			s.logger.Error(fmt.Sprintf("request body close: %v", err))
+			s.logger.Error(fmt.Sprintf("request body close: %v", err), fields...)
 		}
 	}()
 
