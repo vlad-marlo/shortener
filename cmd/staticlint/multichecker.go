@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/gostaticanalysis/nilerr"
+	"github.com/timakin/bodyclose/passes/bodyclose"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/printf"
@@ -22,6 +23,7 @@ func main() {
 		shadow.Analyzer,
 		structtag.Analyzer,
 		nilerr.Analyzer,
+		bodyclose.Analyzer,
 	}
 
 	comp, err := regexp.Compile(`^SA[0-9]{4}$`)

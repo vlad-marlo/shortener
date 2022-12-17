@@ -23,6 +23,7 @@ var (
 )
 
 func TestStore_Create(t *testing.T) {
+	t.Parallel()
 	type fields struct {
 		urls map[string]*model.URL
 	}
@@ -54,8 +55,7 @@ func TestStore_Create(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{
-				urls:            tt.fields.urls,
-				useMutexLocking: false,
+				urls: tt.fields.urls,
 			}
 			err := s.Create(context.TODO(), tt.u)
 			_, ok := s.urls[tt.u.ID]
@@ -73,6 +73,7 @@ func TestStore_Create(t *testing.T) {
 }
 
 func TestStore_GetByID(t *testing.T) {
+	t.Parallel()
 	type fields struct {
 		urls map[string]*model.URL
 	}
@@ -102,8 +103,7 @@ func TestStore_GetByID(t *testing.T) {
 			t.Parallel()
 
 			s := &Store{
-				urls:            tt.fields.urls,
-				useMutexLocking: false,
+				urls: tt.fields.urls,
 			}
 			got, err := s.GetByID(context.TODO(), tt.args.id)
 			if tt.wantErr {
@@ -115,4 +115,14 @@ func TestStore_GetByID(t *testing.T) {
 			assert.True(t, assert.ObjectsAreEqual(got, tt.want), "GetByID() got = %v, want %v", got, tt.want)
 		})
 	}
+}
+
+func TestStore_Ping(t *testing.T) {
+	require.NoError(t, New().Ping(context.Background()))
+}
+
+func TestStore_Close(t *testing.T) {
+	s := New()
+	require.NoError(t, s.Close())
+	require.Error(t, s.Close())
 }

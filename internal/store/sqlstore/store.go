@@ -6,9 +6,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v4"
 	"github.com/lib/pq"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -16,21 +15,27 @@ import (
 
 type SQLStore struct {
 	DB *sql.DB
-	l  *logrus.Logger
+	l  *zap.Logger
 }
 
-// New ...
-func New(ctx context.Context, connectString string, l *logrus.Logger) (*SQLStore, error) {
-	db, err := sql.Open("postgres", connectString)
-	if err != nil {
-		return nil, err
+// New create new connection to db with provided connection string. If db is not nil than will be used it as db.
+func New(ctx context.Context, connectString string, l *zap.Logger, db *sql.DB) (s *SQLStore, err error) {
+	if db == nil {
+		db, err = sql.Open("postgres", connectString)
+		if err != nil {
+			return nil, err
+		}
 	}
-	s := &SQLStore{
+	s = &SQLStore{
 		DB: db,
 		l:  l,
 	}
 
-	if err := s.migrate(ctx); err != nil {
+	if err = s.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("ping: %w", store.ErrNotAccessible)
+	}
+
+	if err = s.migrate(ctx); err != nil {
 		return nil, fmt.Errorf("migrate store: %w", err)
 	}
 
@@ -76,7 +81,7 @@ func (s *SQLStore) Create(ctx context.Context, u *model.URL) error {
 	return nil
 }
 
-// GetByOriginalURL ...
+// GetByOriginalURL return url with original url which is provided in u.BaseURL.
 func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 	if err := s.DB.QueryRowContext(
 		ctx,
@@ -91,7 +96,7 @@ func (s *SQLStore) GetByOriginalURL(ctx context.Context, u *model.URL) error {
 	return nil
 }
 
-// GetByID ...
+// GetByID return url with provided url
 func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	u := &model.URL{}
 
@@ -105,9 +110,6 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 		&u.User,
 		&u.IsDeleted,
 	); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, store.ErrNotFound
-		}
 		return nil, err
 	}
 
@@ -117,7 +119,7 @@ func (s *SQLStore) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	return u, nil
 }
 
-// GetAllUserURLs ...
+// GetAllUserURLs return all urls which are created by provided user.
 func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.URL, error) {
 	var urls []*model.URL
 
@@ -134,7 +136,7 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	}
 	defer func(r *sql.Rows) {
 		if err := r.Close(); err != nil {
-			s.l.Warnf("closing rows: %v", err)
+			s.l.Warn(fmt.Sprintf("closing rows: %v", err))
 		}
 	}(r)
 
@@ -152,7 +154,7 @@ func (s *SQLStore) GetAllUserURLs(ctx context.Context, userID string) ([]*model.
 	return urls, nil
 }
 
-// URLsBulkCreate ...
+// URLsBulkCreate created records in db about urls which are provided in urls argument.
 func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	if len(urls) == 0 {
 		return nil, store.ErrNoContent
@@ -169,7 +171,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 	// rollback if something went wrong
 	defer func() {
 		if err = tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			s.l.Errorf("update drivers: unable to rollback: %v", err)
+			s.l.Error(fmt.Sprintf("update drivers: unable to rollback: %v", err))
 		}
 	}()
 
@@ -180,7 +182,7 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 
 	defer func() {
 		if err = stmt.Close(); err != nil && err != sql.ErrTxDone {
-			s.l.Errorf("update drivers: unable to close stmt: %v", err)
+			s.l.Error(fmt.Sprintf("update drivers: unable to close stmt: %v", err))
 		}
 	}()
 
@@ -207,14 +209,14 @@ func (s *SQLStore) URLsBulkCreate(ctx context.Context, urls []*model.URL) ([]*mo
 		)
 	}
 	if err = tx.Commit(); err != nil {
-		s.l.Errorf("update drivers: unable to commit: %v", err)
+		s.l.Error(fmt.Sprintf("update drivers: unable to commit: %v", err))
 		return nil, err
 	}
 
 	return response, err
 }
 
-// URLsBulkDelete ...
+// URLsBulkDelete deletes all urls with ids provided in urls argument.
 func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 	ids := pq.Array(urls)
 	if _, err := s.DB.Exec(
@@ -227,12 +229,12 @@ func (s *SQLStore) URLsBulkDelete(urls []string, user string) error {
 	return nil
 }
 
-// Ping ...
+// Ping verifies a connection to the database is still alive, establishing a connection if necessary.
 func (s *SQLStore) Ping(ctx context.Context) error {
 	return s.DB.PingContext(ctx)
 }
 
-// Close ...
+// Close closes the database and prevents new queries from starting.
 func (s *SQLStore) Close() error {
 	return s.DB.Close()
 }

@@ -24,10 +24,16 @@ var Analyzer = &analysis.Analyzer{
 					if x.Name.Name != "main" {
 						return false
 					}
-				case *ast.SelectorExpr:
-					if x.Sel.Name == "Exit" {
-						p.Reportf(x.Pos(), "found call os.Exit() in main pkg")
+				case *ast.FuncDecl:
+					if x.Name.Name != "main" {
+						return false
 					}
+				case *ast.SelectorExpr:
+					e, ok := x.X.(*ast.Ident)
+					if ok && e.Name == "os" && x.Sel.Name == "Exit" {
+						p.Reportf(x.Sel.NamePos, "found unexpected call in main func of main pkg")
+					}
+
 				}
 				return true
 			})

@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"io"
+	"errors"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vlad-marlo/logger"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver"
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -52,16 +51,26 @@ func TestInitStorage(t *testing.T) {
 			wantType: &filebased.Store{},
 		},
 	}
+
 	defer func() {
 		_ = os.Remove("xd")
 	}()
+
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			storage, err := initStorage(tc.cfg, logger.WithOpts(logger.WithOutput(io.Discard)))
+			l, err := zap.NewProduction()
 			require.NoError(t, err)
-			if tc.cfg.Database == "" {
-				require.NoError(t, err, fmt.Sprintf("init storage: %v", err))
+			storage, err := initStorage(tc.cfg, l)
+
+			if tc.cfg.StorageType == store.SQLStore {
+				if tc.cfg.Database == "" || errors.Is(err, store.ErrNotAccessible) {
+					return
+				}
 				assert.IsType(t, storage, tc.wantType)
+			}
+
+			if tc.cfg.StorageType == store.FileBasedStorage && tc.cfg.FilePath != "" {
+				require.NoError(t, os.Remove(tc.cfg.FilePath))
 			}
 		})
 	}

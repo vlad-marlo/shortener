@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -11,9 +12,11 @@ import (
 
 type Store struct {
 	Filename string
+	closed   bool
+	mu       sync.Mutex
 }
 
-func New(filename string) (store.Store, error) {
+func New(filename string) (*Store, error) {
 	if filename == "" {
 		return nil, errors.New("store wasn't configured successfully")
 	}
@@ -86,5 +89,11 @@ func (s *Store) URLsBulkDelete(_ []string, _ string) error {
 }
 
 func (s *Store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return store.ErrAlreadyClosed
+	}
+	s.closed = true
 	return nil
 }

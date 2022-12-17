@@ -2,7 +2,7 @@ name: go vet test
 
 on:
   pull_request:
-  push:
+#  push:
 
 jobs:
 

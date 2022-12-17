@@ -4,27 +4,28 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 )
 
 // HandleErrorOr400 return true and handle error if err is not nil
-func (s *Server) handleErrorOrStatus(w http.ResponseWriter, err error, fields map[string]interface{}, status int) bool {
+func (s *Server) handleErrorOrStatus(w http.ResponseWriter, err error, fields []zap.Field, status int) bool {
 	if err != nil {
-		var lvl logrus.Level
+		var lvl zapcore.Level
 		switch {
 		case status >= 500:
-			lvl = logrus.ErrorLevel
+			lvl = zapcore.ErrorLevel
 		case status >= 400:
-			lvl = logrus.DebugLevel
+			lvl = zapcore.DebugLevel
 		case status >= 100:
-			lvl = logrus.TraceLevel
+			lvl = zapcore.DebugLevel
 		default:
-			lvl = logrus.WarnLevel
+			lvl = zapcore.WarnLevel
 		}
 
-		s.logger.WithFields(fields).Log(lvl, fmt.Sprintf("%v", err))
+		s.logger.Log(lvl, fmt.Sprintf("%v", err), fields...)
 		w.WriteHeader(status)
 	}
 	return err != nil
