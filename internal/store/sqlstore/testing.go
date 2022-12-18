@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// TestStore ...
 func TestStore(t *testing.T) (*SQLStore, func(t *testing.T)) {
 	t.Helper()
 	dns := os.Getenv("TEST_DB_URI")

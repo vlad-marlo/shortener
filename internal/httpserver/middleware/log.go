@@ -8,20 +8,24 @@ import (
 	"go.uber.org/zap"
 )
 
+// codeWriter ...
 type codeWriter struct {
 	http.ResponseWriter
 	code int
 }
 
+// WriteHeader ...
 func (c *codeWriter) WriteHeader(code int) {
 	c.ResponseWriter.WriteHeader(code)
 	c.code = code
 }
 
+// Write ...
 func (c *codeWriter) Write(b []byte) (int, error) {
 	return c.ResponseWriter.Write(b)
 }
 
+// Logger ...
 func Logger(logger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

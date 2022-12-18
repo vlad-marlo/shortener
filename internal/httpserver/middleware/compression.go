@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// gzipWriter ...
 type gzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer

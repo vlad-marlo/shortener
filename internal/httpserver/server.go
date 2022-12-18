@@ -13,6 +13,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// Server ...
 type Server struct {
 	chi.Router
 

@@ -16,6 +16,7 @@ import (
 	"github.com/vlad-marlo/shortener/pkg/osexitanalyzer"
 )
 
+// main ...
 func main() {
 	var myChecks = []*analysis.Analyzer{
 		osexitanalyzer.Analyzer,

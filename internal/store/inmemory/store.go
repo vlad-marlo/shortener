@@ -9,6 +9,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
+// Store ...
 type Store struct {
 	mu     sync.Mutex
 	closed bool

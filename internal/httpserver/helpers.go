@@ -10,7 +10,8 @@ import (
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 )
 
-// HandleErrorOr400 return true and handle error if err is not nil
+// handleErrorOrStatus return true and handle error if err is not nil.
+// If error is not nil, it will set http status and log error message to server logger.
 func (s *Server) handleErrorOrStatus(w http.ResponseWriter, err error, fields []zap.Field, status int) bool {
 	if err != nil {
 		var lvl zapcore.Level
@@ -31,6 +32,7 @@ func (s *Server) handleErrorOrStatus(w http.ResponseWriter, err error, fields []
 	return err != nil
 }
 
+// getUserFromRequest ...
 func getUserFromRequest(r *http.Request) string {
 	user := r.Context().Value(middleware.UserCTXName)
 	if user == nil {

@@ -9,12 +9,14 @@ import (
 )
 
 type (
+	// Poll ...
 	Poll struct {
 		store  store.Store
 		input  chan *task
 		logger *zap.Logger
 		stop   chan struct{}
 	}
+	// task ...
 	task struct {
 		user string
 		ids  []string
@@ -46,6 +48,7 @@ func (p *Poll) DeleteURLs(urls []string, user string) {
 	}
 }
 
+// startPolling ...
 func (p *Poll) startPolling() {
 	p.logger.Info("starting poller polling")
 	for {
@@ -71,6 +74,7 @@ func (p *Poll) startPolling() {
 	}
 }
 
+// Close ...
 func (p *Poll) Close() {
 	p.logger.Info("close poller queue")
 	close(p.stop)

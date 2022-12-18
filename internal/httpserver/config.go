@@ -8,6 +8,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// Config ...
 type Config struct {
 	BindAddr    string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`

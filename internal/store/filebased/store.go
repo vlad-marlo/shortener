@@ -10,12 +10,14 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
+// Store ...
 type Store struct {
 	Filename string
 	closed   bool
 	mu       sync.Mutex
 }
 
+// New ...
 func New(filename string) (*Store, error) {
 	if filename == "" {
 		return nil, errors.New("store wasn't configured successfully")
@@ -37,6 +39,7 @@ func New(filename string) (*Store, error) {
 	return s, nil
 }
 
+// GetByID ...
 func (s *Store) GetByID(_ context.Context, id string) (*model.URL, error) {
 	p, err := newProducer(s.Filename)
 	defer func() {
@@ -50,6 +53,7 @@ func (s *Store) GetByID(_ context.Context, id string) (*model.URL, error) {
 	return p.GetURLByID(id)
 }
 
+// Create ...
 func (s *Store) Create(_ context.Context, u *model.URL) error {
 	p, err := newProducer(s.Filename)
 	defer func() {
@@ -63,6 +67,7 @@ func (s *Store) Create(_ context.Context, u *model.URL) error {
 	return p.CreateURL(u)
 }
 
+// GetAllUserURLs ...
 func (s *Store) GetAllUserURLs(_ context.Context, user string) ([]*model.URL, error) {
 	p, err := newProducer(s.Filename)
 	defer func() {
@@ -76,18 +81,22 @@ func (s *Store) GetAllUserURLs(_ context.Context, user string) ([]*model.URL, er
 	return p.GetAllUserURLs(user)
 }
 
+// Ping ...
 func (s *Store) Ping(_ context.Context) error {
 	return nil
 }
 
+// URLsBulkCreate ...
 func (s *Store) URLsBulkCreate(_ context.Context, _ []*model.URL) ([]*model.BatchCreateURLsResponse, error) {
 	return nil, nil
 }
 
+// URLsBulkDelete ...
 func (s *Store) URLsBulkDelete(_ []string, _ string) error {
 	return nil
 }
 
+// Close ...
 func (s *Store) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

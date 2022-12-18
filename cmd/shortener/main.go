@@ -26,6 +26,7 @@ var (
 	buildCommit  = "N/A"
 )
 
+// main ...
 func main() {
 	storeLogger, err := createLogger("storage")
 	if err != nil {

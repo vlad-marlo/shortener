@@ -13,6 +13,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
+// SQLStore ...
 type SQLStore struct {
 	DB *sql.DB
 	l  *zap.Logger

@@ -11,9 +11,12 @@ import (
 )
 
 var (
+	// once ...
 	once sync.Once
-	c    *Config
-	l    *zap.Logger
+	// o ...
+	c *Config
+	// l ...
+	l *zap.Logger
 )
 
 // TestI is giving access to all objects like *testing.B *testing.T in helper functions.
@@ -22,6 +25,7 @@ type TestI interface {
 	Fatalf(format string, args ...any)
 }
 
+// TestServer returns server instance, prepared for testing. Always defer func which is returned by TestServer.
 func TestServer(t TestI, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
 		var err error

@@ -7,6 +7,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Analyzer ...
 var Analyzer = &analysis.Analyzer{
 	Name: "osexitcheck",
 	Doc:  "check for unchecked errors",

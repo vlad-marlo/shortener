@@ -14,24 +14,32 @@ import (
 )
 
 type (
+	// Encryptor ...
 	Encryptor struct {
 		nonce []byte
 		GCM   cipher.AEAD
 	}
+	// cookieUserIDValueType ...
 	cookieUserIDValueType string
 )
 
 const (
-	UserIDCookieName                         = "user"
-	UserCTXName        cookieUserIDValueType = "user_in_context"
-	UserIDDefaultValue                       = "default_user"
+	// UserIDCookieName ...
+	UserIDCookieName = "user"
+	// UserCTXName ...
+	UserCTXName cookieUserIDValueType = "user_in_context"
+	// UserIDDefaultValue ...
+	UserIDDefaultValue = "default_user"
 )
 
 var (
+	// encryptor ...
 	encryptor *Encryptor
-	log       *zap.Logger
+	// log ...
+	log *zap.Logger
 )
 
+// init ...
 func init() {
 	log, _ = zap.NewProduction()
 }
