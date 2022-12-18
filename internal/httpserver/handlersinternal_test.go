@@ -403,20 +403,66 @@ func TestServer_handlePingStore(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestServer_handleURLBulkCreate(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	storage := mock_store.NewMockStore(ctrl)
-	s, td := TestServer(t, storage)
-	defer require.NoError(t, td())
+func TestServer_handleURLBulkCreate_mock(t *testing.T) {
+	type mockData struct {
+		err  error
+		urls []*model.BatchCreateURLsResponse
+	}
+	type want struct {
+		code int
+		ids  []string
+	}
+	tt := []struct {
+		name string
+		data string
+		mock mockData
+		want want
+	}{
+		{
+			name: "empty data",
+			data: "",
+			mock: mockData{
+				err:  nil,
+				urls: []*model.BatchCreateURLsResponse{},
+			},
+			want: want{
+				code: http.StatusBadRequest,
+				ids:  nil,
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			storage := mock_store.NewMockStore(ctrl)
+			storage.
+				EXPECT().
+				URLsBulkCreate(gomock.Any(), gomock.Any()).
+				Return(tc.mock.urls, tc.mock.err).
+				AnyTimes()
+			s, td := TestServer(t, storage)
+			defer require.NoError(t, td())
 
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/", strings.NewReader(``))
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("POST", "/", strings.NewReader(tc.data))
 
-	s.handleURLBulkCreate(w, r)
-	res := w.Result()
-	defer assert.NoError(t, res.Body.Close())
-	defer assert.NoError(t, r.Body.Close())
-	assert.Equal(t, http.StatusCreated, res.StatusCode)
+			s.handleURLBulkCreate(w, r)
+			res := w.Result()
+			defer assert.NoError(t, res.Body.Close())
+			defer assert.NoError(t, r.Body.Close())
+			assert.Equal(t, tc.want.code, res.StatusCode)
+			if tc.want.code != http.StatusCreated {
+				return
+			}
+			var data []*model.BatchCreateURLsResponse
+			assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &data))
+			for _, u := range data {
+				assert.Contains(t, tc.want.ids, u.CorrelationID)
+			}
+		})
+	}
+
 }
 
 func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
