@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// types ...
 type (
 	// Encryptor ...
 	Encryptor struct {
@@ -23,6 +24,7 @@ type (
 	cookieUserIDValueType string
 )
 
+// constants ...
 const (
 	// UserIDCookieName ...
 	UserIDCookieName = "user"
@@ -32,6 +34,7 @@ const (
 	UserIDDefaultValue = "default_user"
 )
 
+// vars ...
 var (
 	// encryptor ...
 	encryptor *Encryptor

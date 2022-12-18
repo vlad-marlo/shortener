@@ -6,6 +6,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
+// const ...
 const (
 	// InMemoryStorage ...
 	InMemoryStorage string = "in-memory"

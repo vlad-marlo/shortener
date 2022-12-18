@@ -2,6 +2,7 @@ package store
 
 import "errors"
 
+// vars ...
 var (
 	// ErrNotFound ...
 	ErrNotFound = errors.New("not found")

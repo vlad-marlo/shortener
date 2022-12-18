@@ -8,6 +8,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// types
 type (
 	// Poll ...
 	Poll struct {

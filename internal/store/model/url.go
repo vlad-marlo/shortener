@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// vars ...
 var (
 	// ErrURLContainSpace ...
 	ErrURLContainSpace = errors.New("url must have no spaces in it")

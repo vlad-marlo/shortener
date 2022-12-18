@@ -1,5 +1,6 @@
 package model
 
+// types ...
 type (
 	// ResultResponse ...
 	ResultResponse struct {
