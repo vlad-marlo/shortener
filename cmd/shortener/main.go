@@ -131,7 +131,7 @@ func initStorage(cfg *httpserver.Config, logger *zap.Logger) (storage store.Stor
 	return
 }
 
-// TraceFields ...
+// TraceFields return zap fields for logger to trace debug
 func TraceFields() []zap.Field {
 	return []zap.Field{
 		zap.String("build version", buildVersion),

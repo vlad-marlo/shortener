@@ -23,7 +23,7 @@ func New(ctx context.Context, connectString string, l *zap.Logger, db *sql.DB) (
 	if db == nil {
 		db, err = sql.Open("postgres", connectString)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("sql open: %w", err)
 		}
 	}
 	s = &SQLStore{
