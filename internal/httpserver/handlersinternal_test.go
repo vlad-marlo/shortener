@@ -26,7 +26,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
-var unknownErr = errors.New("")
+var errUnknownErr = errors.New("")
 
 // testRequest ...
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, []byte) {
@@ -658,7 +658,7 @@ func TestServer_handleURLGet(t *testing.T) {
 			},
 			mock: mock{
 				u:     nil,
-				error: unknownErr,
+				error: errUnknownErr,
 			},
 			code: http.StatusNotFound,
 		},
