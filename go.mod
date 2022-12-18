@@ -10,10 +10,8 @@ require (
 	github.com/gostaticanalysis/nilerr v0.1.1
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/lib/pq v1.10.6
-	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	github.com/timakin/bodyclose v0.0.0-20221125081123-e39cf3fc478e
-	github.com/vlad-marlo/logger v0.0.0-20221119182609-9fcce49dd1b2
 	go.uber.org/zap v1.24.0
 	golang.org/x/tools v0.4.0
 	honnef.co/go/tools v0.3.3

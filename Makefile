@@ -9,6 +9,7 @@ build:
 .PHONY: test
 test:
 	go test -v ./...
+	go test -v -race ./...
 
 .PHONY: lint
 lint:

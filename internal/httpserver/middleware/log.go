@@ -5,17 +5,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
 
 type codeWriter struct {
 	http.ResponseWriter
 	code int
-}
-
-type Fields interface {
-	map[string]interface{} | logrus.Fields
 }
 
 func (c *codeWriter) WriteHeader(code int) {
