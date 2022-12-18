@@ -228,7 +228,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = json.Unmarshal(body, &data); s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
+	if err = json.Unmarshal(body, &data); s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
 		return
 	}
 
