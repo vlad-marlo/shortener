@@ -19,7 +19,7 @@ import (
 
 func BenchmarkServer_handleURLGet(b *testing.B) {
 	tt := map[string]error{
-		"no error":              nil,
+		"no error B/op":         nil,
 		"with is-deleted error": store.ErrIsDeleted,
 		"with not found":        store.ErrNotFound,
 		"unknown error":         errors.New(""),
@@ -189,5 +189,4 @@ func BenchmarkServer_handleURLBatchCreate(b *testing.B) {
 			}
 		})
 	}
-	b.Log("B/op")
 }
