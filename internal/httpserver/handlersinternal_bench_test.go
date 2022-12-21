@@ -1,163 +1,193 @@
 package httpserver
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"go.uber.org/zap"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/vlad-marlo/shortener/internal/store"
-	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	mock_store "github.com/vlad-marlo/shortener/internal/store/mock"
+	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 func BenchmarkServer_handleURLGet(b *testing.B) {
-	storage := inmemory.New()
-	l, _ := zap.NewProduction()
-	s := New(
-		&Config{
-			BaseURL:     "http://localhost:8080",
-			BindAddr:    "localhost:8080",
-			StorageType: store.InMemoryStorage,
-		},
-		storage,
-		l,
-	)
+	tt := map[string]error{
+		"no error":              nil,
+		"with is-deleted error": store.ErrIsDeleted,
+		"with not found":        store.ErrNotFound,
+		"unknown error":         errors.New(""),
+	}
+	for name, err := range tt {
+		b.Run(name, func(b *testing.B) {
+			ctrl := gomock.NewController(b)
+			storage := mock_store.NewMockStore(ctrl)
 
-	ts := httptest.NewServer(s.Router)
-	defer ts.Close()
+			s, td := TestServer(b, storage)
+			defer require.NoError(b, td())
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		req, err := http.NewRequest(http.MethodGet, ts.URL+"/xd", nil)
-		if err != nil {
-			b.Fatalf("new request: %v", err)
-		}
+			u := &model.URL{
+				BaseURL:   "xdsd",
+				ID:        "xd",
+				IsDeleted: false,
+			}
 
-		b.StartTimer()
+			storage.
+				EXPECT().
+				GetByID(
+					gomock.Any(),
+					gomock.Any(),
+				).
+				Return(u, err).
+				AnyTimes()
 
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			b.Fatalf("doing http request: %v", err)
-		}
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest(http.MethodGet, "/xd", nil)
+				b.StartTimer()
 
-		if err := resp.Body.Close(); err != nil {
-			b.Fatalf("close body: %v", err)
-		}
+				s.handleURLGet(w, r)
+
+				b.StopTimer()
+				res := w.Result()
+				assert.NoError(b, r.Body.Close(), fmt.Sprintf("iteration: %d", i))
+				assert.NoError(b, res.Body.Close(), fmt.Sprintf("iteration: %d", i))
+				b.StartTimer()
+
+			}
+		})
 	}
 }
 
 func BenchmarkServer_handleURLPost(b *testing.B) {
-	storage := inmemory.New()
-	l, _ := zap.NewProduction()
-	s := New(
-		&Config{
-			BaseURL:     "http://localhost:8080",
-			BindAddr:    "localhost:8080",
-			StorageType: store.InMemoryStorage,
-		},
-		storage,
-		l,
-	)
+	tt := map[string]error{
+		"no error":     nil,
+		"unknown err":  errors.New(""),
+		"exists error": store.ErrAlreadyExists,
+	}
 
-	ts := httptest.NewServer(s.Router)
-	defer ts.Close()
+	for name, err := range tt {
+		b.Run(name, func(b *testing.B) {
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		req, err := http.NewRequest(http.MethodPost, ts.URL+"/", strings.NewReader("https://ya.ru/"))
-		if err != nil {
-			b.Fatalf("new request: %v", err)
-		}
+			ctrl := gomock.NewController(b)
+			storage := mock_store.NewMockStore(ctrl)
 
-		b.StartTimer()
+			s, td := TestServer(b, storage)
+			defer require.NoError(b, td())
+			storage.
+				EXPECT().
+				Create(gomock.Any(), gomock.Any()).
+				Return(err).
+				AnyTimes()
 
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			b.Fatalf("doing http request: %v", err)
-		}
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://ya.ru/"))
+				w := httptest.NewRecorder()
+				b.StartTimer()
 
-		if err := resp.Body.Close(); err != nil {
-			b.Fatalf("close body: %v", err)
-		}
+				s.handleURLCreate(w, r)
+
+				b.StopTimer()
+				res := w.Result()
+				assert.NoError(b, res.Body.Close())
+				assert.NoError(b, r.Body.Close())
+				b.StartTimer()
+			}
+
+		})
 	}
 }
 
 func BenchmarkServer_handleURLPostJSON(b *testing.B) {
-	storage := inmemory.New()
-	l, err := zap.NewProduction()
-	if err != nil {
-		b.Fatalf("zap new production: %v", err)
+	tt := map[string]error{
+		"no error":     nil,
+		"unknown err":  errors.New(""),
+		"exists error": store.ErrAlreadyExists,
 	}
-	s := New(
-		&Config{
-			BaseURL:     "http://localhost:8080",
-			BindAddr:    "localhost:8080",
-			StorageType: store.InMemoryStorage,
-		},
-		storage,
-		l,
-	)
 
-	ts := httptest.NewServer(s.Router)
-	defer ts.Close()
+	for name, err := range tt {
+		b.Run(name, func(b *testing.B) {
+			// prepare mock storage
+			ctrl := gomock.NewController(b)
+			storage := mock_store.NewMockStore(ctrl)
+			storage.
+				EXPECT().
+				Create(gomock.Any(), gomock.Any()).
+				Return(err).
+				AnyTimes()
+			s, td := TestServer(b, storage)
+			defer require.NoError(b, td())
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		req, err := http.NewRequest(http.MethodPost, ts.URL+"/api/shorten", strings.NewReader(`{"url": "ya.ru"}`))
-		if err != nil {
-			b.Fatalf("new request: %v", err)
-		}
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				// prepare test recorder and test request
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(`{"url": "ya.ru"}`))
+				b.StartTimer()
 
-		b.StartTimer()
+				s.handleURLCreateJSON(w, r)
 
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			b.Fatalf("doing http request: %v", err)
-		}
-
-		if err := resp.Body.Close(); err != nil {
-			b.Fatalf("close body: %v", err)
-		}
+				b.StopTimer()
+				res := w.Result()
+				assert.NoError(b, res.Body.Close())
+				assert.NoError(b, r.Body.Close())
+				b.StartTimer()
+			}
+		})
 	}
 }
 
 func BenchmarkServer_handleURLBatchCreate(b *testing.B) {
-	ctrl := gomock.NewController(b)
-	storage := mock_store.NewMockStore(ctrl)
-	storage.
-		EXPECT().
-		URLsBulkCreate(gomock.Any(), gomock.Any()).
-		Return(nil, nil).
-		AnyTimes()
-	s, td := TestServer(b, storage)
-	defer func() {
-		if err := td(); err != nil {
-			b.Fatalf("close server: %v", err)
-		}
-	}()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		data := `
-		[
-			{"original_url": "ya.ru/a", "correlation_id": "a"},
-			{"original_url": "ya.ru/b", "correlation_id": "b"},
-			{"original_url": "ya.ru/c", "correlation_id": "c"}
-		]
-		`
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest("POST", "/", strings.NewReader(data))
-		s.handleURLBulkCreate(w, r)
-		if err := r.Body.Close(); err != nil {
-			b.Fatalf("close body: %v", err)
-		}
+	data := `
+	[
+		{"original_url": "ya.ru/a", "correlation_id": "a"},
+		{"original_url": "ya.ru/b", "correlation_id": "b"},
+		{"original_url": "ya.ru/c", "correlation_id": "c"}
+	]`
+	tt := map[string]error{
+		"no error": nil,
+		"error":    store.ErrAlreadyExists,
 	}
+	for name, err := range tt {
+		b.Run(name, func(b *testing.B) {
+			ctrl := gomock.NewController(b)
+			storage := mock_store.NewMockStore(ctrl)
+			storage.
+				EXPECT().
+				URLsBulkCreate(gomock.Any(), gomock.Any()).
+				Return(nil, err).
+				AnyTimes()
+			s, td := TestServer(b, storage)
+			defer require.NoError(b, td())
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest("POST", "/", strings.NewReader(data))
+				b.StartTimer()
+
+				s.handleURLBulkCreate(w, r)
+
+				b.StopTimer()
+				res := w.Result()
+				assert.NoError(b, res.Body.Close())
+				assert.NoError(b, r.Body.Close())
+				b.StartTimer()
+			}
+		})
+	}
+
 }

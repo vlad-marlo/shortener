@@ -33,7 +33,15 @@ func TestServer(t TestI, storage store.Store) (*Server, func() error) {
 		if err != nil {
 			t.Fatalf("init test config: %v", err)
 		}
-		l, _ = zap.NewProduction()
+		cfg := zap.Config{
+			Level:            zap.NewAtomicLevelAt(zap.PanicLevel),
+			Development:      true,
+			Encoding:         "console",
+			EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
+			OutputPaths:      []string{},
+			ErrorOutputPaths: []string{},
+		}
+		l = zap.Must(cfg.Build())
 	})
 	t.Helper()
 	if s, ok := storage.(*mock_store.MockStore); ok {
