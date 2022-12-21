@@ -4,6 +4,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
+// Example ...
 func Example() {
 	// init storage
 	// for example inmemory storage

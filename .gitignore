@@ -18,6 +18,7 @@ cmd/shortener/main
 cmd/shortener/shortener
 shortener
 main
+staticlint
 
 # Dependency directories (remove the comment below to include it)
 vendor/

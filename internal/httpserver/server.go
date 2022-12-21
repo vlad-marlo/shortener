@@ -6,30 +6,32 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddlewares "github.com/go-chi/chi/v5/middleware"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// Server ...
 type Server struct {
 	chi.Router
 
 	store  store.Store
 	config *Config
 	poller *poll.Poll
-	logger *logrus.Logger
+	logger *zap.Logger
 }
 
 // New return new configured server with params from config object
 // need for creating only one connection to db
-func New(config *Config, storage store.Store, l *logrus.Logger) *Server {
+func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 	s := &Server{
 		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
 		store:  storage,
+		poller: poll.New(storage, l),
 	}
 	s.configureMiddlewares()
 	l.Info("middleware configured successfully")
@@ -37,15 +39,15 @@ func New(config *Config, storage store.Store, l *logrus.Logger) *Server {
 	s.configureRoutes()
 	l.Info("routes configured successfully")
 
-	s.configurePoller()
-
 	l.Info("store configured successfully")
 
 	return s
 }
 
-func (s *Server) Close() {
+// Close closes poller and storage connection.
+func (s *Server) Close() error {
 	s.poller.Close()
+	return s.store.Close()
 }
 
 // configureRoutes initialize all endpoints of server
@@ -73,9 +75,9 @@ func (s *Server) configureRoutes() {
 		r.Post("/shorten", s.handleURLCreateJSON)
 		r.Post("/shorten/batch", s.handleURLBulkCreate)
 
-		r.Route("/user/urls", func(rc chi.Router) {
-			rc.Get("/", s.handleGetUserURLs)
-			rc.Delete("/", s.handleURLBulkDelete)
+		r.Route("/user/urls", func(r chi.Router) {
+			r.Get("/", s.handleGetUserURLs)
+			r.Delete("/", s.handleURLBulkDelete)
 		})
 	})
 }
@@ -91,11 +93,6 @@ func (s *Server) configureMiddlewares() {
 		// chi middlewares
 		middleware.Logger(s.logger),
 	)
-}
-
-// configurePoller creates new poller
-func (s *Server) configurePoller() {
-	s.poller = poll.New(s.store)
 }
 
 // ListenAndServe is starting http server on correct address

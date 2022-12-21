@@ -3,7 +3,7 @@ package middleware_test
 import (
 	"net/http"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 )
@@ -12,7 +12,7 @@ func ExampleLogger() {
 	// init your handler
 	handler := &http.ServeMux{}
 	// init your logger
-	logger := logrus.New()
+	logger, _ := zap.NewProduction()
 	go func() {
 		_ = http.ListenAndServe(
 			"localhost:8080",
