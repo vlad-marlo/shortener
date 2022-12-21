@@ -186,9 +186,8 @@ func BenchmarkServer_handleURLBatchCreate(b *testing.B) {
 				assert.NoError(b, res.Body.Close())
 				assert.NoError(b, r.Body.Close())
 				b.StartTimer()
-				b.ReportMetric(2, "B/op")
 			}
 		})
 	}
-
+	b.Log("B/op")
 }
