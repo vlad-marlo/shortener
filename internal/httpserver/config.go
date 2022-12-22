@@ -24,10 +24,10 @@ type Config struct {
 }
 
 // defaultBindAddr ...
-const defaultBindAddr = "http://localhost:8080"
+const defaultBindAddr = "localhost:8080"
 
 // defaultBaseURL ...
-const defaultBaseURL = "http://localhost"
+const defaultBaseURL = "http://localhost:8080"
 
 // NewConfig return pointer to config with params. Empty params will be set by default
 func NewConfig() (*Config, error) {
