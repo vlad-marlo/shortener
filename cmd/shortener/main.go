@@ -53,11 +53,17 @@ func main() {
 	if err != nil {
 		serverLogger.Fatal(fmt.Sprintf("init storage: %v", err))
 	}
+	defer func() {
+		if err = storage.Close(); err != nil {
+			storeLogger.Fatal(fmt.Sprintf("close storage: %v", err))
+		}
+	}()
 
 	s := httpserver.New(config, storage, serverLogger)
 	defer func() {
-		if err := s.Close(); err != nil {
-			serverLogger.Fatal(fmt.Sprintf("close server: %v", err))
+		err := s.Close()
+		if err != nil {
+			serverLogger.Error(fmt.Sprintf("close server: %v", err))
 		}
 	}()
 
@@ -73,7 +79,7 @@ func main() {
 	}()
 
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	sig := <-interrupt
 	serverLogger.Info(
 		"graceful shut down",

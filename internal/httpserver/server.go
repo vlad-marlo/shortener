@@ -26,6 +26,7 @@ type Server struct {
 	chi.Router
 
 	srv *http.Server
+	dev bool
 
 	store  store.Store
 	config *Config
@@ -37,6 +38,7 @@ type Server struct {
 // need for creating only one connection to db
 func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 	s := &Server{
+		dev:    true,
 		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
@@ -66,7 +68,10 @@ func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 // Close closes poller and storage connection.
 func (s *Server) Close() error {
 	s.poller.Close()
-	return s.store.Close()
+	if s.dev {
+		return s.srv.Close()
+	}
+	return nil
 }
 
 // configureRoutes initialize all endpoints of server
