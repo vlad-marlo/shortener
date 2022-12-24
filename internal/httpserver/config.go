@@ -33,20 +33,28 @@ const defaultBaseURL = "http://localhost:8080"
 // NewConfig return pointer to config with params. Empty params will be set by default
 func NewConfig() (*Config, error) {
 	c := &Config{}
+	if err := env.Parse(c); err != nil {
+		return nil, err
+	}
 	defer c.setDefaultValues()
-
-	c.ConfigFile = os.Getenv("CONFIG")
+	flag.StringVar(&c.BindAddr, "a", c.BindAddr, "server will be started with this url")
+	flag.StringVar(&c.BaseURL, "b", c.BaseURL, "url will be used in generation of shorten url")
+	flag.StringVar(&c.FilePath, "f", c.FilePath, "path to storage path")
+	flag.StringVar(&c.Database, "d", c.Database, "db dns")
+	flag.BoolVar(&c.HTTPS, "s", c.HTTPS, "if true, server will start with https protocol")
 	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "server will use this settings")
 	flag.Parse()
 
-	if err := c.parseFile(); err != nil {
-		return nil, fmt.Errorf("parse file: %w", err)
+	if c.Database != "" {
+		c.StorageType = store.SQLStore
+	} else if c.FilePath != "" {
+		c.StorageType = store.FileBasedStorage
+	} else {
+		c.StorageType = store.InMemoryStorage
 	}
 
-	c.parseFlags()
-
-	if err := env.Parse(c); err != nil {
-		return nil, fmt.Errorf("parse env: %w", err)
+	if err := c.parseFile(); err != nil {
+		return nil, err
 	}
 
 	return c, nil
@@ -71,10 +79,25 @@ func (c *Config) parseFile() error {
 		}
 		return fmt.Errorf("os readfile: %w", err)
 	}
+	newConfig := &Config{}
 
-	err = json.Unmarshal(data, c)
+	err = json.Unmarshal(data, newConfig)
 	if err != nil {
 		return fmt.Errorf("unmarshal json: %w", err)
+	}
+
+	// setting all values which are not provided
+	if c.Database == "" {
+		c.Database = newConfig.Database
+	}
+	if c.BaseURL == "" {
+		c.BaseURL = newConfig.BaseURL
+	}
+	if c.FilePath == "" {
+		c.FilePath = newConfig.FilePath
+	}
+	if c.BindAddr == "" {
+		c.BindAddr = newConfig.BindAddr
 	}
 
 	return nil
@@ -97,13 +120,4 @@ func (c *Config) setDefaultValues() {
 	if c.BaseURL == "" {
 		c.BaseURL = defaultBaseURL
 	}
-}
-
-func (c *Config) parseFlags() {
-	flag.StringVar(&c.BindAddr, "a", c.BindAddr, "server will be started with this url")
-	flag.StringVar(&c.BaseURL, "b", c.BaseURL, "url will be used in generation of shorten url")
-	flag.StringVar(&c.FilePath, "f", c.FilePath, "path to storage path")
-	flag.StringVar(&c.Database, "d", c.Database, "db dns")
-	flag.BoolVar(&c.HTTPS, "s", c.HTTPS, "if true, server will start with https protocol")
-	flag.Parse()
 }
