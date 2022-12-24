@@ -61,8 +61,7 @@ func main() {
 
 	s := httpserver.New(config, storage, serverLogger)
 	defer func() {
-		err := s.Close()
-		if err != nil {
+		if err = s.Close(); err != nil {
 			serverLogger.Error(fmt.Sprintf("close server: %v", err))
 		}
 	}()

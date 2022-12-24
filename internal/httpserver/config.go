@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -65,6 +66,9 @@ func (c *Config) parseFile() error {
 	var data []byte
 	data, err = os.ReadFile(path.Join(ex, c.FilePath))
 	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return nil
+		}
 		return fmt.Errorf("os readfile: %w", err)
 	}
 
