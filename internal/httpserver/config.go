@@ -99,6 +99,9 @@ func (c *Config) parseFile() error {
 	if c.BindAddr == "" {
 		c.BindAddr = newConfig.BindAddr
 	}
+	if !c.HTTPS {
+		c.HTTPS = newConfig.HTTPS
+	}
 
 	return nil
 }
