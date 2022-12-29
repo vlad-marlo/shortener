@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -53,12 +55,27 @@ func main() {
 	if err != nil {
 		serverLogger.Fatal(fmt.Sprintf("init storage: %v", err))
 	}
-
-	s := httpserver.New(config, storage, serverLogger)
 	defer func() {
-		if err := s.Close(); err != nil {
-			serverLogger.Fatal(fmt.Sprintf("close server: %v", err))
+		if err = storage.Close(); err != nil {
+			storeLogger.Fatal(fmt.Sprintf("close storage: %v", err))
 		}
+	}()
+
+	// init server
+	s := httpserver.New(config, storage, serverLogger)
+
+	// preparations for graceful shut down
+	var sig os.Signal
+	interrupt := make(chan os.Signal, 1)
+	closed := make(chan struct{})
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		sig = <-interrupt
+		if err = s.Close(); err != nil {
+			serverLogger.Error(fmt.Sprintf("close server: %v", err))
+		}
+		close(closed)
 	}()
 
 	serverLogger.Info(
@@ -69,12 +86,12 @@ func main() {
 
 	go func() {
 		// logging fatal because listen and server always return not-nil error
-		serverLogger.Fatal(fmt.Sprintf("listen and server server: %v", s.ListenAndServe()))
+		if err = s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			serverLogger.Fatal(fmt.Sprintf("listen and server server: %v", err))
+		}
 	}()
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
-	sig := <-interrupt
+	<-closed
 	serverLogger.Info(
 		"graceful shut down",
 		zap.String("signal", sig.String()),

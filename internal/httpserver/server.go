@@ -3,19 +3,30 @@ package httpserver
 import (
 	"net/http"
 	"net/http/pprof"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddlewares "github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
 )
 
+// vars
+var (
+	// timeOut is server timeout
+	timeOut = 10 * time.Minute
+)
+
 // Server ...
 type Server struct {
 	chi.Router
+
+	srv *http.Server
+	dev bool
 
 	store  store.Store
 	config *Config
@@ -27,12 +38,22 @@ type Server struct {
 // need for creating only one connection to db
 func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 	s := &Server{
+		dev:    true,
 		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
 		store:  storage,
 		poller: poll.New(storage, l),
 	}
+
+	s.srv = &http.Server{
+		Addr:         s.config.BindAddr,
+		Handler:      s.Router,
+		ReadTimeout:  timeOut,
+		WriteTimeout: timeOut,
+		IdleTimeout:  timeOut,
+	}
+
 	s.configureMiddlewares()
 	l.Info("middleware configured successfully")
 
@@ -47,7 +68,10 @@ func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 // Close closes poller and storage connection.
 func (s *Server) Close() error {
 	s.poller.Close()
-	return s.store.Close()
+	if s.dev {
+		return s.srv.Close()
+	}
+	return nil
 }
 
 // configureRoutes initialize all endpoints of server
@@ -97,5 +121,15 @@ func (s *Server) configureMiddlewares() {
 
 // ListenAndServe is starting http server on correct address
 func (s *Server) ListenAndServe() error {
-	return http.ListenAndServe(s.config.BindAddr, s.Router)
+	if s.config.HTTPS {
+		manager := &autocert.Manager{
+			Cache:      autocert.DirCache("cache-dir"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(s.config.BindAddr),
+		}
+		s.srv.TLSConfig = manager.TLSConfig()
+
+		return s.srv.ListenAndServeTLS("", "")
+	}
+	return s.srv.ListenAndServe()
 }

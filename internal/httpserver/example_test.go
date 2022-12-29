@@ -28,7 +28,7 @@ func ExampleNew() {
 	// always close server
 	defer func() {
 		if err := server.Close(); err != nil {
-			// some err handling
+			// handle error
 		}
 	}()
 

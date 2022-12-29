@@ -327,9 +327,10 @@ func TestServer_HandleURLGetAndCreateJSON(t *testing.T) {
 			// t.Log(w.Body.String())
 			var result response
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			// t.Logf("%+v", result)
+			t.Logf("%+v", result)
 
 			id := strings.TrimPrefix(result.URL, "http://localhost:8080/")
+			id = strings.TrimPrefix(id, s.config.BaseURL+"/")
 			require.Equal(t, tt.args.id, id)
 		})
 	}

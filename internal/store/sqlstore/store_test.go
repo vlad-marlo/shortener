@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
@@ -35,22 +36,62 @@ func TestSQLStore_Ping(t *testing.T) {
 func TestSQLStore_GetByID(t *testing.T) {
 	s, td := TestStore(t)
 	defer td(t)
+	var (
+		u1, u2, u3 *model.URL
+		err        error
+	)
+	u1, err = model.NewURL("https://xd.com", "marlo")
+	assert.NoError(t, err)
+	u2, err = model.NewURL("https://ya.com", "marlo")
+	assert.NoError(t, err)
+	u3, err = model.NewURL("https://gooogle.com", "marlo")
+	assert.NoError(t, err)
+	create := []*model.URL{
+		u1,
+		u2,
+		u3,
+	}
+	for _, u := range create {
+		require.NoError(t, s.Create(context.Background(), u))
+	}
+	require.NoError(t, s.URLsBulkDelete([]string{u3.ID}, "marlo"))
 
 	tt := []struct {
-		name    string
-		args    string
-		wantErr assert.ErrorAssertionFunc
+		name     string
+		args     string
+		wantErr  assert.ErrorAssertionFunc
+		exactErr error
 	}{
 		{
-			name:    "negative",
-			args:    uuid.New().String(),
-			wantErr: assert.Error,
+			name:     "negative",
+			args:     uuid.New().String(),
+			wantErr:  assert.Error,
+			exactErr: nil,
+		},
+		{
+			name:    "positive #1",
+			args:    u1.ID,
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "positive #2",
+			args:    u2.ID,
+			wantErr: assert.NoError,
+		},
+		{
+			name:     "negative is deleted",
+			args:     u3.ID,
+			wantErr:  assert.Error,
+			exactErr: store.ErrIsDeleted,
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := s.GetByID(context.Background(), tc.args)
 			tc.wantErr(t, err)
+			if tc.exactErr != nil {
+				assert.ErrorIs(t, err, tc.exactErr)
+			}
 		})
 	}
 }
@@ -65,7 +106,7 @@ func TestSQLStore_Create(t *testing.T) {
 			err assert.ErrorAssertionFunc
 		}
 	)
-	store, teardown := TestStore(t)
+	storage, teardown := TestStore(t)
 	defer teardown(t)
 	tt := []struct {
 		name string
@@ -97,7 +138,7 @@ func TestSQLStore_Create(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			u, err := model.NewURL(tc.args.u, tc.args.user)
 			require.NoError(t, err, "create new model url")
-			err = store.Create(context.Background(), u)
+			err = storage.Create(context.Background(), u)
 			tc.want.err(t, err)
 		})
 	}
