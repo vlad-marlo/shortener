@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"path"
 
@@ -15,13 +16,16 @@ import (
 
 // Config ...
 type Config struct {
-	ConfigFile  string
-	BindAddr    string `env:"SERVER_ADDRESS" json:"server_address"`
-	BaseURL     string `env:"BASE_URL" json:"base_url"`
-	FilePath    string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
-	Database    string `env:"DATABASE_DSN" json:"database_dsn"`
-	HTTPS       bool   `env:"ENABLE_HTTPS" json:"enable_https"`
+	ConfigFile string
+	BindAddr   string `env:"SERVER_ADDRESS" json:"server_address"`
+	BaseURL    string `env:"BASE_URL" json:"base_url"`
+	FilePath   string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
+	Database   string `env:"DATABASE_DSN" json:"database_dsn"`
+	HTTPS      bool   `env:"ENABLE_HTTPS" json:"enable_https"`
+	TrustedIP  string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
+
 	StorageType string
+	IP          net.IP
 }
 
 // defaultBindAddr ...
@@ -43,6 +47,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&c.Database, "d", c.Database, "db dns")
 	flag.BoolVar(&c.HTTPS, "s", c.HTTPS, "if true, server will start with https protocol")
 	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "server will use this settings")
+	flag.StringVar(&c.TrustedIP, "t", c.TrustedIP, "trusted ip in CIDR presentation")
 	flag.Parse()
 
 	if c.Database != "" {
@@ -101,6 +106,9 @@ func (c *Config) parseFile() error {
 	}
 	if !c.HTTPS {
 		c.HTTPS = newConfig.HTTPS
+	}
+	if c.TrustedIP == "" {
+		c.TrustedIP = newConfig.TrustedIP
 	}
 
 	return nil

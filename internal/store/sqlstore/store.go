@@ -239,3 +239,20 @@ func (s *SQLStore) Ping(ctx context.Context) error {
 func (s *SQLStore) Close() error {
 	return s.DB.Close()
 }
+
+// GetData ...
+func (s *SQLStore) GetData(ctx context.Context) (*model.InternalStat, error) {
+	q := `
+	SELECT 
+	    COUNT(*),
+	    COUNT(
+	        DISTINCT(created_by)
+	    )
+	FROM urls;
+`
+	m := new(model.InternalStat)
+	if err := s.DB.QueryRowContext(ctx, q).Scan(&m.CountOfURLs, &m.CountOfUsers); err != nil {
+		return nil, fmt.Errorf("query row context: %w", err)
+	}
+	return m, nil
+}

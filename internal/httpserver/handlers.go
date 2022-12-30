@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
-
-	"github.com/go-chi/chi/v5"
 
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
@@ -22,7 +22,7 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(ctx)
 	fields := []zap.Field{
 		zap.String("request_id", reqID),
-		zap.String("handler", "get url by id"),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
@@ -49,6 +49,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	// setting up response meta info
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -107,6 +108,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 
 	req, err := io.ReadAll(r.Body)
@@ -159,6 +161,7 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	userID := getUserFromRequest(r)
 
@@ -199,6 +202,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	ctx := r.Context()
 
@@ -218,6 +222,7 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	var (
 		data []*model.BulkCreateURLRequest
@@ -282,6 +287,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	var data []string
 	userID := getUserFromRequest(r)
@@ -303,4 +309,38 @@ func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	s.poller.DeleteURLs(data, userID)
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleInternalStats give trusted user access to specific stats about data records.
+func (s *Server) handleInternalStats(w http.ResponseWriter, r *http.Request) {
+	fields := []zap.Field{
+		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
+	}
+
+	xRealIP := r.Header.Get("X-Real-IP")
+	if xRealIP == "" {
+		s.handleErrorOrStatus(w, errors.New("IP was not provided in header X-Real-IP"), fields, http.StatusForbidden)
+		return
+	}
+
+	ip := net.ParseIP(xRealIP)
+	if ip == nil || !ip.Equal(s.config.IP) {
+		s.handleErrorOrStatus(w, errors.New("IP provided in headers is not correct"), fields, http.StatusForbidden)
+		return
+	}
+	stat, err := s.store.GetData(r.Context())
+	if err != nil {
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
+		return
+	}
+	data, err := json.Marshal(stat)
+	if err != nil {
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if _, err = w.Write(data); err != nil {
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
+	}
 }
