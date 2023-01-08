@@ -100,7 +100,6 @@ func main() {
 
 // createLogger creates new named logger with stdout and file output.
 func createLogger(name string) (*zap.Logger, error) {
-
 	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl >= zapcore.ErrorLevel
 	})

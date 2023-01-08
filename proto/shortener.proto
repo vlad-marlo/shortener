@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package shortener.proto;
+
+option go_package = "api/proto";
+
+message URL {
+  string link = 1;
+}
+
+message CreateManyLink {
+  string correlation_id = 1;
+  string original_url = 2;
+}
+
+message CreateManyLinkInResponse {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message GetManyLink {
+  string short_url = 1;
+  string original_url = 2;
+}
+
+message CreateLinkRequest {
+  string url = 1;
+}
+
+message CreateLinkResponse {
+  string result = 1;
+  uint32 status = 2;
+}
+
+message GetLinkRequest {
+  string id = 1;
+}
+
+message GetLinkResponse {
+  string location = 1;
+  uint32 status = 2;
+}
+
+message GetManyLinksRequest {
+}
+
+message GetManyLinksResponse {
+  repeated GetManyLink urls = 1;
+  uint32 status = 2;
+}
+
+message CreateLinkJSONRequest{
+  string url = 1;
+}
+
+message CreateLinkJSONResponse{
+  string result = 1;
+  uint32 status = 2;
+}
+
+message PingRequest {}
+
+message PingResponse {
+  uint32 status = 1;
+}
+
+message CreateManyRequest {
+  repeated CreateManyLink urls = 1;
+}
+
+message CreateManyResponse {
+  repeated CreateManyLinkInResponse urls = 1;
+  uint32 status = 2;
+}
+
+message DeleteManyRequest {
+  repeated string ids = 1;
+  string user = 2;
+}
+
+message DeleteManyResponse {
+  uint32 status = 1;
+}
+
+service Shortener {
+  rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse);
+  rpc CreateLinkJSON(CreateLinkJSONRequest) returns (CreateLinkJSONResponse);
+  rpc GetLink(GetLinkRequest) returns (GetLinkResponse);
+  rpc GetManyLinks(GetManyLinksRequest) returns (GetManyLinksResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc CreateManyLinks(CreateManyRequest) returns (CreateManyResponse);
+  rpc DeleteMany(DeleteManyRequest) returns (DeleteManyResponse);
+}
