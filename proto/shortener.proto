@@ -4,27 +4,9 @@ package shortener.proto;
 
 option go_package = "api/proto";
 
-message URL {
-  string link = 1;
-}
-
-message CreateManyLink {
-  string correlation_id = 1;
-  string original_url = 2;
-}
-
-message CreateManyLinkInResponse {
-  string correlation_id = 1;
-  string short_url = 2;
-}
-
-message GetManyLink {
-  string short_url = 1;
-  string original_url = 2;
-}
-
 message CreateLinkRequest {
   string url = 1;
+  string user = 2;
 }
 
 message CreateLinkResponse {
@@ -42,18 +24,24 @@ message GetLinkResponse {
 }
 
 message GetManyLinksRequest {
+  string user = 1;
 }
 
 message GetManyLinksResponse {
-  repeated GetManyLink urls = 1;
+  message URL {
+    string short_url = 1;
+    string original_url = 2;
+  }
+  repeated URL urls = 1;
   uint32 status = 2;
 }
 
-message CreateLinkJSONRequest{
+message CreateLinkJSONRequest {
   string url = 1;
+  string user = 2;
 }
 
-message CreateLinkJSONResponse{
+message CreateLinkJSONResponse {
   string result = 1;
   uint32 status = 2;
 }
@@ -65,11 +53,20 @@ message PingResponse {
 }
 
 message CreateManyRequest {
-  repeated CreateManyLink urls = 1;
+  message URL {
+    string correlation_id = 1;
+    string original_url = 2;
+  }
+  repeated URL urls = 1;
+  string user = 2;
 }
 
 message CreateManyResponse {
-  repeated CreateManyLinkInResponse urls = 1;
+  message URL {
+    string correlation_id = 1;
+    string short_url = 2;
+  }
+  repeated URL urls = 1;
   uint32 status = 2;
 }
 
@@ -82,6 +79,12 @@ message DeleteManyResponse {
   uint32 status = 1;
 }
 
+message GetUserRequest {}
+
+message GetUserResponse {
+  string user = 1;
+}
+
 service Shortener {
   rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse);
   rpc CreateLinkJSON(CreateLinkJSONRequest) returns (CreateLinkJSONResponse);
@@ -90,4 +93,5 @@ service Shortener {
   rpc Ping(PingRequest) returns (PingResponse);
   rpc CreateManyLinks(CreateManyRequest) returns (CreateManyResponse);
   rpc DeleteMany(DeleteManyRequest) returns (DeleteManyResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
 }
