@@ -46,7 +46,9 @@ message CreateLinkJSONResponse {
   uint32 status = 2;
 }
 
-message PingRequest {}
+message PingRequest {
+
+}
 
 message PingResponse {
   uint32 status = 1;
@@ -85,13 +87,22 @@ message GetUserResponse {
   string user = 1;
 }
 
+message GetInternalStatsRequest {
+}
+
+message GetInternalStatsResponse {
+  int64 urls = 1;
+  int64 users = 2;
+}
+
 service Shortener {
-  rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse);
-  rpc CreateLinkJSON(CreateLinkJSONRequest) returns (CreateLinkJSONResponse);
-  rpc GetLink(GetLinkRequest) returns (GetLinkResponse);
-  rpc GetManyLinks(GetManyLinksRequest) returns (GetManyLinksResponse);
   rpc Ping(PingRequest) returns (PingResponse);
-  rpc CreateManyLinks(CreateManyRequest) returns (CreateManyResponse);
-  rpc DeleteMany(DeleteManyRequest) returns (DeleteManyResponse);
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetLink(GetLinkRequest) returns (GetLinkResponse);
+  rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse);
+  rpc DeleteMany(DeleteManyRequest) returns (DeleteManyResponse);
+  rpc GetManyLinks(GetManyLinksRequest) returns (GetManyLinksResponse);
+  rpc CreateManyLinks(CreateManyRequest) returns (CreateManyResponse);
+  rpc CreateLinkJSON(CreateLinkJSONRequest) returns (CreateLinkJSONResponse);
+  rpc GetInternalStats(GetInternalStatsRequest) returns (GetInternalStatsResponse);
 }

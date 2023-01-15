@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 
+	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
@@ -29,17 +30,15 @@ type Server struct {
 	dev bool
 
 	store  store.Store
-	config *Config
 	poller *poll.Poll
 	logger *zap.Logger
 }
 
 // New return new configured server with params from config object
 // need for creating only one connection to db
-func New(config *Config, storage store.Store, l *zap.Logger) *Server {
+func New(storage store.Store, l *zap.Logger) *Server {
 	s := &Server{
 		dev:    true,
-		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
 		store:  storage,
@@ -47,7 +46,7 @@ func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 	}
 
 	s.srv = &http.Server{
-		Addr:         s.config.BindAddr,
+		Addr:         config.Get().BindAddr,
 		Handler:      s.Router,
 		ReadTimeout:  timeOut,
 		WriteTimeout: timeOut,
@@ -121,11 +120,11 @@ func (s *Server) configureMiddlewares() {
 
 // ListenAndServe is starting http server on correct address
 func (s *Server) ListenAndServe() error {
-	if s.config.HTTPS {
+	if config.Get().HTTPS {
 		manager := &autocert.Manager{
 			Cache:      autocert.DirCache("cache-dir"),
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(s.config.BindAddr),
+			HostPolicy: autocert.HostWhitelist(config.Get().BindAddr),
 		}
 		s.srv.TLSConfig = manager.TLSConfig()
 
