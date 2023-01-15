@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/poll"
 	"github.com/vlad-marlo/shortener/internal/store"
 	mock_store "github.com/vlad-marlo/shortener/internal/store/mock"
@@ -14,7 +15,7 @@ var (
 	// once ...
 	once sync.Once
 	// o ...
-	c *Config
+	c *config.Config
 	// l ...
 	l *zap.Logger
 )
@@ -28,11 +29,6 @@ type TestI interface {
 // TestServer returns server instance, prepared for testing. Always defer func which is returned by TestServer.
 func TestServer(t TestI, storage store.Store) (*Server, func() error) {
 	once.Do(func() {
-		var err error
-		c, err = NewConfig()
-		if err != nil {
-			t.Fatalf("init test config: %v", err)
-		}
 		cfg := zap.Config{
 			Level:            zap.NewAtomicLevelAt(zap.PanicLevel),
 			Development:      true,
@@ -42,6 +38,7 @@ func TestServer(t TestI, storage store.Store) (*Server, func() error) {
 			ErrorOutputPaths: []string{},
 		}
 		l = zap.Must(cfg.Build())
+		c = config.Get()
 	})
 	t.Helper()
 	if s, ok := storage.(*mock_store.MockStore); ok {

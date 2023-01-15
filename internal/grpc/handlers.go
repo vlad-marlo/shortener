@@ -61,15 +61,13 @@ func (s *Server) CreateLinkJSON(ctx context.Context, r *pb.CreateLinkJSONRequest
 	var u *model.URL
 	u, err = model.NewURL(r.Url, user)
 	if err != nil {
-		resp.Status = http.StatusBadRequest
-		return &resp, nil
+		return nil, BadRequest()
 	}
 
 	if err = s.store.Create(ctx, u); errors.Is(err, store.ErrAlreadyExists) {
 		resp.Status = http.StatusConflict
 	} else if err != nil {
-		resp.Status = http.StatusInternalServerError
-		return &resp, nil
+		return nil, Internal()
 	} else {
 		resp.Status = http.StatusCreated
 	}
@@ -109,6 +107,9 @@ func (s *Server) CreateManyLinks(ctx context.Context, r *pb.CreateManyRequest) (
 
 	var res []*model.BatchCreateURLsResponse
 	res, err = s.store.URLsBulkCreate(ctx, urls)
+	if err != nil {
+		return nil, Internal()
+	}
 	for _, b := range res {
 		if ctx.Err() != nil {
 			return nil, status.Error(codes.Canceled, "canceled")
@@ -168,8 +169,7 @@ func (s *Server) GetManyLinks(ctx context.Context, r *pb.GetManyLinksRequest) (*
 	}
 	urls, err := s.store.GetAllUserURLs(ctx, user)
 	if err != nil {
-		resp.Status = http.StatusInternalServerError
-		return &resp, nil
+		return nil, Internal()
 	}
 
 	if len(urls) == 0 {

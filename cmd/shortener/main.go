@@ -64,7 +64,8 @@ func main() {
 	// init server
 	httpServer := httpserver.New(storage, serverLogger)
 	if config.Get().GRPC {
-		grpcServer, err := grpc.New(storage, serverLogger)
+		var grpcServer *grpc.Server
+		grpcServer, err = grpc.New(storage, serverLogger)
 		if err != nil {
 			serverLogger.Fatal("init grpc server", zap.Error(err))
 		}

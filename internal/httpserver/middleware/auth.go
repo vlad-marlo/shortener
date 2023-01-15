@@ -13,8 +13,8 @@ import (
 
 // types ...
 type (
-	// cookieUserIDValueType ...
-	userCtxKey struct{}
+	// UserCtxKey ...
+	UserCtxKey struct{}
 )
 
 // constants ...
@@ -45,7 +45,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			rawUserID = uuid.New().String()
 		} else if err = encryptor.Get().DecodeUUID(user.Value, &rawUserID); err != nil {
 			log.Debug(fmt.Sprintf("decode: %v", err))
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userCtxKey{}, UserIDDefaultValue)))
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCtxKey{}, UserIDDefaultValue)))
 			return
 		}
 
@@ -56,6 +56,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			Path:  "/",
 		}
 		http.SetCookie(w, c)
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userCtxKey{}, rawUserID)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserCtxKey{}, rawUserID)))
 	})
+}
+
+func GetUserFromCtx(ctx context.Context) any {
+	return ctx.Value(UserCtxKey{})
 }

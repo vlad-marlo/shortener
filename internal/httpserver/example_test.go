@@ -10,11 +10,6 @@ import (
 )
 
 func ExampleNew() {
-	// parse server config
-	config, err := httpserver.NewConfig()
-	// always check error
-	if err != nil {
-	}
 	// create some storage; for example inmemory
 	storage := inmemory.New()
 	defer func() {
@@ -24,7 +19,7 @@ func ExampleNew() {
 		}
 	}()
 	l, _ := zap.NewProduction()
-	server := httpserver.New(config, storage, l)
+	server := httpserver.New(storage, l)
 	// always close server
 	defer func() {
 		if err := server.Close(); err != nil {

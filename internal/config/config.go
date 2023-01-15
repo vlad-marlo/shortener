@@ -38,40 +38,40 @@ const defaultBindAddr = "localhost:8080"
 // defaultBaseURL ...
 const defaultBaseURL = "http://localhost:8080"
 
-var c *Config
+var config *Config
 var once sync.Once
 
 // Get return pointer to config with params. Empty params will be set by default
 func Get() *Config {
 	once.Do(func() {
-		c := &Config{}
-		if err := env.Parse(c); err != nil {
+		config = &Config{}
+		if err := env.Parse(config); err != nil {
 			log.Fatalf("parse env: %v", err)
 		}
-		defer c.setDefaultValues()
-		flag.StringVar(&c.BindAddr, "a", c.BindAddr, "server will be started with this url")
-		flag.StringVar(&c.BaseURL, "b", c.BaseURL, "url will be used in generation of shorten url")
-		flag.StringVar(&c.FilePath, "f", c.FilePath, "path to storage path")
-		flag.StringVar(&c.Database, "d", c.Database, "db dns")
-		flag.BoolVar(&c.HTTPS, "s", c.HTTPS, "if true, server will start with https protocol")
-		flag.BoolVar(&c.HTTPS, "g", c.GRPC, "if true, server will start with grpc")
-		flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "server will use this settings")
-		flag.StringVar(&c.TrustedIP, "t", c.TrustedIP, "trusted ip in CIDR presentation")
+		defer config.setDefaultValues()
+		flag.StringVar(&config.BindAddr, "a", config.BindAddr, "server will be started with this url")
+		flag.StringVar(&config.BaseURL, "b", config.BaseURL, "url will be used in generation of shorten url")
+		flag.StringVar(&config.FilePath, "f", config.FilePath, "path to storage path")
+		flag.StringVar(&config.Database, "d", config.Database, "db dns")
+		flag.BoolVar(&config.HTTPS, "s", config.HTTPS, "if true, server will start with https protocol")
+		flag.BoolVar(&config.HTTPS, "g", config.GRPC, "if true, server will start with grpc")
+		flag.StringVar(&config.ConfigFile, "c", config.ConfigFile, "server will use this settings")
+		flag.StringVar(&config.TrustedIP, "t", config.TrustedIP, "trusted ip in CIDR presentation")
 		flag.Parse()
 
-		if c.Database != "" {
-			c.StorageType = store.SQLStore
-		} else if c.FilePath != "" {
-			c.StorageType = store.FileBasedStorage
+		if config.Database != "" {
+			config.StorageType = store.SQLStore
+		} else if config.FilePath != "" {
+			config.StorageType = store.FileBasedStorage
 		} else {
-			c.StorageType = store.InMemoryStorage
+			config.StorageType = store.InMemoryStorage
 		}
 
-		if err := c.parseFile(); err != nil {
+		if err := config.parseFile(); err != nil {
 			log.Fatalf("parse file: %v", err)
 		}
 	})
-	return c
+	return config
 }
 
 // parseFile ...

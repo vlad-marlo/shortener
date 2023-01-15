@@ -26,8 +26,9 @@ var (
 type Server struct {
 	chi.Router
 
-	srv *http.Server
-	dev bool
+	srv    *http.Server
+	config *config.Config
+	dev    bool
 
 	store  store.Store
 	poller *poll.Poll
@@ -42,6 +43,7 @@ func New(storage store.Store, l *zap.Logger) *Server {
 		Router: chi.NewRouter(),
 		logger: l,
 		store:  storage,
+		config: config.Get(),
 		poller: poll.New(storage, l),
 	}
 
