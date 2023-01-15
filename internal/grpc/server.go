@@ -23,6 +23,7 @@ type Server struct {
 	logger *zap.Logger
 }
 
+// New ...
 func New(s store.Store, l *zap.Logger) (*Server, error) {
 	server := &Server{
 		UnimplementedShortenerServer: pb.UnimplementedShortenerServer{},
@@ -42,6 +43,7 @@ func New(s store.Store, l *zap.Logger) (*Server, error) {
 	return server, nil
 }
 
+// Start ...
 func (s *Server) Start() error {
 	return s.server.Serve(s.listener)
 }

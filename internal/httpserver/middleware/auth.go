@@ -60,6 +60,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// GetUserFromCtx ...
 func GetUserFromCtx(ctx context.Context) any {
 	return ctx.Value(UserCtxKey{})
 }
