@@ -51,11 +51,11 @@ func Get() *Config {
 		defer config.setDefaultValues()
 		flag.StringVar(&config.BindAddr, "a", config.BindAddr, "server will be started with this url")
 		flag.StringVar(&config.BaseURL, "b", config.BaseURL, "url will be used in generation of shorten url")
-		flag.StringVar(&config.FilePath, "f", config.FilePath, "path to storage path")
-		flag.StringVar(&config.Database, "d", config.Database, "db dns")
-		flag.BoolVar(&config.HTTPS, "s", config.HTTPS, "if true, server will start with https protocol")
-		flag.BoolVar(&config.HTTPS, "g", config.GRPC, "if true, server will start with grpc")
 		flag.StringVar(&config.ConfigFile, "c", config.ConfigFile, "server will use this settings")
+		flag.StringVar(&config.Database, "d", config.Database, "db dns")
+		flag.StringVar(&config.FilePath, "f", config.FilePath, "path to storage path")
+		flag.BoolVar(&config.HTTPS, "g", config.GRPC, "if true, server will start with grpc")
+		flag.BoolVar(&config.HTTPS, "s", config.HTTPS, "if true, server will start with https protocol")
 		flag.StringVar(&config.TrustedIP, "t", config.TrustedIP, "trusted ip in CIDR presentation")
 		flag.Parse()
 
@@ -71,10 +71,10 @@ func Get() *Config {
 			log.Fatalf("parse file: %v", err)
 		}
 	})
-	return config
+	return config.Copy()
 }
 
-// parseFile ...
+// parseFile checks file and parses data to config.
 func (c *Config) parseFile() error {
 	if c.ConfigFile == "" {
 		return nil
@@ -129,7 +129,7 @@ func (c *Config) parseFile() error {
 	return nil
 }
 
-// setDefaultValues ...
+// setDefaultValues setting default values of Config fields.
 func (c *Config) setDefaultValues() {
 	switch {
 	case c.Database != "":
@@ -146,4 +146,26 @@ func (c *Config) setDefaultValues() {
 	if c.BaseURL == "" {
 		c.BaseURL = defaultBaseURL
 	}
+}
+
+// Copy returns Config object with same fields as parent config.
+func (c *Config) Copy() *Config {
+	return &Config{
+		ConfigFile:  c.ConfigFile,
+		BindAddr:    c.BindAddr,
+		BaseURL:     c.BaseURL,
+		FilePath:    c.FilePath,
+		Database:    c.Database,
+		HTTPS:       c.HTTPS,
+		GRPC:        c.GRPC,
+		GRPCAddr:    c.GRPCAddr,
+		TrustedIP:   c.TrustedIP,
+		StorageType: c.StorageType,
+		IP:          c.IP,
+	}
+}
+
+// Set replaces singleton config with provided in arguments.
+func Set(c *Config) {
+	config = c
 }
