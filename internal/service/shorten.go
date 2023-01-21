@@ -111,7 +111,7 @@ func (s *Service) GetByID(ctx context.Context, id string) (*model.URL, error) {
 }
 
 // GetInternalStats ...
-func (s *Service) GetInternalStats(ctx context.Context, ip string) (*model.InternalStat, error) {
+func (s *Service) GetInternalStats(ctx context.Context, _ string) (*model.InternalStat, error) {
 	// TODO add checks that ip is in trusted ip subnetwork.
 	return s.store.GetData(ctx)
 }
