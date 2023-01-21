@@ -21,6 +21,7 @@ import (
 
 	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	srv "github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	mock_store "github.com/vlad-marlo/shortener/internal/store/mock"
@@ -119,7 +120,9 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 
 	storage := inmemory.New()
 	l, _ := zap.NewProduction()
-	s := New(storage, l)
+	srvc := srv.New(l, storage)
+	defer require.NoError(t, srvc.Close())
+	s := New(srvc, l)
 	s.config = &config.Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
@@ -193,7 +196,9 @@ func TestServer_HandleURLGet(t *testing.T) {
 
 	storage := inmemory.New()
 	l, _ := zap.NewProduction()
-	s := New(storage, l)
+	srvc := srv.New(l, storage)
+	defer require.NoError(t, srvc.Close())
+	s := New(srvc, l)
 	s.config = &config.Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
@@ -663,6 +668,18 @@ func TestServer_handleURLGet(t *testing.T) {
 			mock: mock{
 				u:     nil,
 				error: errUnknownErr,
+			},
+			code: http.StatusInternalServerError,
+		},
+		{
+			name: "not found error",
+			args: args{
+				id:  "a",
+				url: "https://ya.ru",
+			},
+			mock: mock{
+				u:     nil,
+				error: store.ErrNotFound,
 			},
 			code: http.StatusNotFound,
 		},

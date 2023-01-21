@@ -22,5 +22,9 @@ func NotFound() error {
 
 // BadRequest ...
 func BadRequest() error {
-	return status.Errorf(codes.InvalidArgument, "bad request")
+	return status.Error(codes.InvalidArgument, "bad request")
+}
+
+func Canceled() error {
+	return status.Error(codes.Canceled, "canceled")
 }

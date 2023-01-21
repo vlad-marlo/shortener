@@ -1,34 +1,45 @@
 package grpc
 
 import (
+	"context"
 	"net"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	_ "google.golang.org/grpc/encoding/gzip"
 
 	"github.com/vlad-marlo/shortener/internal/config"
-	"github.com/vlad-marlo/shortener/internal/poll"
-	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/model"
 	pb "github.com/vlad-marlo/shortener/pkg/proto"
 )
+
+type service interface {
+	Ping(ctx context.Context) error
+	CreateURL(ctx context.Context, user, url string) (*model.URL, error)
+	DeleteManyURLs(user string, urls []string)
+	GetAllURLsByUser(ctx context.Context, user string) ([]*model.AllUserURLsResponse, error)
+	NewURL(url, user string, correlationID ...string) (*model.URL, error)
+	CreateManyURLs(ctx context.Context, user string, urls []model.URLer) ([]*model.BatchCreateURLsResponse, error)
+	GetByID(ctx context.Context, id string) (*model.URL, error)
+	GetInternalStats(ctx context.Context, ip string) (*model.InternalStat, error)
+}
 
 // Server is grpc Server
 type Server struct {
 	pb.UnimplementedShortenerServer
-	store    store.Store
-	server   *grpc.Server
-	poller   *poll.Poll
+	srv    service
+	server *grpc.Server
+
 	listener net.Listener
 
 	logger *zap.Logger
 }
 
 // New ...
-func New(s store.Store, l *zap.Logger) (*Server, error) {
+func New(srv service, l *zap.Logger) (*Server, error) {
 	server := &Server{
 		UnimplementedShortenerServer: pb.UnimplementedShortenerServer{},
-		store:                        s,
-		poller:                       poll.New(s, l),
+		srv:                          srv,
 		logger:                       l,
 	}
 	listener, err := net.Listen("tcp", config.Get().GRPCAddr)
@@ -46,4 +57,9 @@ func New(s store.Store, l *zap.Logger) (*Server, error) {
 // Start ...
 func (s *Server) Start() error {
 	return s.server.Serve(s.listener)
+}
+
+// Close ...
+func (s *Server) Close() error {
+	return s.listener.Close()
 }

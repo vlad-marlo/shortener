@@ -16,6 +16,7 @@ import (
 	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/grpc"
 	_ "github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	"github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
@@ -32,12 +33,12 @@ var (
 
 // main ...
 func main() {
-	storeLogger, err := createLogger("storage")
+	srvLogger, err := createLogger("service")
 	if err != nil {
 		panic(fmt.Sprintf("init strorage logger: %v", err))
 	}
 	defer func() {
-		_ = storeLogger.Sync()
+		_ = srvLogger.Sync()
 	}()
 
 	serverLogger, err := createLogger("server")
@@ -51,27 +52,33 @@ func main() {
 		serverLogger.Fatal(fmt.Sprintf("init config: %v", err))
 	}
 
-	storage, err := initStorage(storeLogger)
+	storage, err := initStorage(srvLogger)
 	if err != nil {
 		serverLogger.Fatal(fmt.Sprintf("init storage: %v", err))
 	}
+	srv := service.New(srvLogger, storage)
 	defer func() {
-		if err = storage.Close(); err != nil {
-			storeLogger.Fatal(fmt.Sprintf("close storage: %v", err))
+		if err = srv.Close(); err != nil {
+			srvLogger.Error("close service", zap.Error(err))
 		}
 	}()
 
 	// init server
-	httpServer := httpserver.New(storage, serverLogger)
+	httpServer := httpserver.New(srv, serverLogger)
 	if config.Get().GRPC {
 		var grpcServer *grpc.Server
-		grpcServer, err = grpc.New(storage, serverLogger)
+		grpcServer, err = grpc.New(srv, serverLogger)
 		if err != nil {
 			serverLogger.Fatal("init grpc server", zap.Error(err))
 		}
 		go func() {
 			if err = grpcServer.Start(); err != nil {
 				serverLogger.Fatal("grpc server", zap.Error(err))
+			}
+		}()
+		defer func() {
+			if err = grpcServer.Close(); err != nil {
+				serverLogger.Error("grpc server stop", zap.Error(err))
 			}
 		}()
 	}

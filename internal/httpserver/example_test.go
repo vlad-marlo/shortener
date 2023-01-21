@@ -1,11 +1,10 @@
-package httpserver_test
+package httpserver
 
 import (
 	"net/http"
 
 	"go.uber.org/zap"
 
-	"github.com/vlad-marlo/shortener/internal/httpserver"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 )
 
@@ -19,7 +18,8 @@ func ExampleNew() {
 		}
 	}()
 	l, _ := zap.NewProduction()
-	server := httpserver.New(storage, l)
+	var srv service
+	server := New(srv, l)
 	// always close server
 	defer func() {
 		if err := server.Close(); err != nil {

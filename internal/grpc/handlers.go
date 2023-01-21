@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -26,7 +27,8 @@ type UserGetter interface {
 func (s *Server) Ping(ctx context.Context, _ *pb.PingRequest) (*pb.PingResponse, error) {
 	var resp pb.PingResponse
 	resp.Status = http.StatusOK
-	if err := s.store.Ping(ctx); err != nil {
+	if err := s.srv.Ping(ctx); err != nil {
+		s.logger.Error("ping", zap.Error(err))
 		resp.Status = http.StatusInternalServerError
 	}
 	return &resp, nil
@@ -35,16 +37,18 @@ func (s *Server) Ping(ctx context.Context, _ *pb.PingRequest) (*pb.PingResponse,
 // GetLink ...
 func (s *Server) GetLink(ctx context.Context, r *pb.GetLinkRequest) (*pb.GetLinkResponse, error) {
 	resp := new(pb.GetLinkResponse)
-	url, err := s.store.GetByID(ctx, r.Id)
+	url, err := s.srv.GetByID(ctx, r.Id)
 	resp.Status = http.StatusOK
-	if errors.Is(err, store.ErrIsDeleted) {
+	switch {
+	case errors.Is(err, store.ErrIsDeleted):
 		resp.Status = http.StatusGone
-	} else if errors.Is(err, store.ErrNotFound) {
+	case errors.Is(err, store.ErrNotFound):
 		return nil, NotFound()
-	} else if err != nil {
+	case err != nil:
 		resp.Status = http.StatusInternalServerError
 		return nil, Internal()
 	}
+
 	resp.Location = url.BaseURL
 	return resp, nil
 }
@@ -59,12 +63,8 @@ func (s *Server) CreateLinkJSON(ctx context.Context, r *pb.CreateLinkJSONRequest
 	}
 
 	var u *model.URL
-	u, err = model.NewURL(r.Url, user)
-	if err != nil {
-		return nil, BadRequest()
-	}
-
-	if err = s.store.Create(ctx, u); errors.Is(err, store.ErrAlreadyExists) {
+	u, err = s.srv.CreateURL(ctx, user, r.Url)
+	if errors.Is(err, store.ErrAlreadyExists) {
 		resp.Status = http.StatusConflict
 	} else if err != nil {
 		return nil, Internal()
@@ -86,33 +86,26 @@ func (s *Server) CreateManyLinks(ctx context.Context, r *pb.CreateManyRequest) (
 		return nil, Unauthenticated()
 	}
 
-	var urls []*model.URL
-	for _, u := range r.Urls {
-		if ctx.Err() != nil {
-			return nil, status.Error(codes.Canceled, "canceled")
-		}
-
-		var url *model.URL
-		url, err = model.NewURL(u.OriginalUrl, user, u.CorrelationId)
-		if err != nil {
-			return nil, Internal()
-		}
-
-		urls = append(urls, url)
-	}
-
 	if len(r.Urls) == 0 {
 		return nil, BadRequest()
 	}
 
+	var urls []model.URLer
+	for _, u := range r.Urls {
+		urls = append(urls, u)
+	}
+
 	var res []*model.BatchCreateURLsResponse
-	res, err = s.store.URLsBulkCreate(ctx, urls)
+	res, err = s.srv.CreateManyURLs(ctx, user, urls)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, Canceled()
+		}
 		return nil, Internal()
 	}
 	for _, b := range res {
 		if ctx.Err() != nil {
-			return nil, status.Error(codes.Canceled, "canceled")
+			return nil, Canceled()
 		}
 		resp.Urls = append(resp.Urls, &pb.CreateManyResponse_URL{
 			CorrelationId: b.CorrelationID,
@@ -123,23 +116,14 @@ func (s *Server) CreateManyLinks(ctx context.Context, r *pb.CreateManyRequest) (
 	return &resp, nil
 }
 
-// CreateLink ...
+// CreateLink xd.
 func (s *Server) CreateLink(ctx context.Context, r *pb.CreateLinkRequest) (*pb.CreateLinkResponse, error) {
 	var resp pb.CreateLinkResponse
 
-	user, err := s.getUser(r)
-	if err != nil {
-		return nil, Unauthenticated()
-	}
+	user, _ := s.getUser(r)
 
-	var u *model.URL
-	u, err = model.NewURL(r.Url, user)
-	if err != nil {
-		resp.Status = http.StatusBadRequest
-		return &resp, status.Error(codes.InvalidArgument, "bad request data")
-	}
-
-	if err = s.store.Create(ctx, u); errors.Is(err, store.ErrAlreadyExists) {
+	u, err := s.srv.CreateURL(ctx, user, r.Url)
+	if errors.Is(err, store.ErrAlreadyExists) {
 		resp.Status = http.StatusConflict
 	} else if err != nil {
 		resp.Status = http.StatusInternalServerError
@@ -163,11 +147,8 @@ func (s *Server) GetUser(context.Context, *pb.GetUserRequest) (*pb.GetUserRespon
 // GetManyLinks ...
 func (s *Server) GetManyLinks(ctx context.Context, r *pb.GetManyLinksRequest) (*pb.GetManyLinksResponse, error) {
 	var resp pb.GetManyLinksResponse
-	user, err := s.getUser(r)
-	if err != nil {
-		return nil, Unauthenticated()
-	}
-	urls, err := s.store.GetAllUserURLs(ctx, user)
+	user, _ := s.getUser(r)
+	urls, err := s.srv.GetAllURLsByUser(ctx, user)
 	if err != nil {
 		return nil, Internal()
 	}
@@ -179,8 +160,8 @@ func (s *Server) GetManyLinks(ctx context.Context, r *pb.GetManyLinksRequest) (*
 
 	for _, u := range urls {
 		resp.Urls = append(resp.Urls, &pb.GetManyLinksResponse_URL{
-			OriginalUrl: u.BaseURL,
-			ShortUrl:    u.ID,
+			OriginalUrl: u.OriginalURL,
+			ShortUrl:    u.ShortURL,
 		})
 	}
 
@@ -190,11 +171,10 @@ func (s *Server) GetManyLinks(ctx context.Context, r *pb.GetManyLinksRequest) (*
 // DeleteMany ...
 func (s *Server) DeleteMany(_ context.Context, r *pb.DeleteManyRequest) (*pb.DeleteManyResponse, error) {
 	var resp pb.DeleteManyResponse
-	user, err := s.getUser(r)
-	if err != nil {
-		return nil, Unauthenticated()
-	}
-	s.poller.DeleteURLs(r.Ids, user)
+	// we can do not check error because of interceptor which is checking if request have user field than this field is valid
+	// else interceptor will return unauthorized error to user.
+	u, _ := s.getUser(r)
+	s.srv.DeleteManyURLs(u, r.Ids)
 	resp.Status = http.StatusAccepted
 	return &resp, nil
 }
