@@ -1,11 +1,7 @@
 package grpc
 
 import (
-	"compress/gzip"
 	"context"
-	"fmt"
-	"io"
-	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -18,11 +14,11 @@ const (
 	UserIDMDKey = "user_id"
 )
 
-// AuthInterceptor ...
-func (s *Server) AuthInterceptor() grpc.UnaryServerInterceptor {
+// CheckAuthInterceptor checks if grpc request has user field and  authentication data contains in this field or in metadata.
+func (s *Server) CheckAuthInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if r, ok := req.(UserGetter); ok {
-			if _, err := s.getUser(r); err != nil {
+			if _, err := s.getUser(r); err != nil && s.UserFromCtx(ctx) == "" {
 				return nil, Unauthenticated()
 			}
 		}
@@ -44,30 +40,4 @@ func (s *Server) UserFromCtx(ctx context.Context) (id string) {
 		return ""
 	}
 	return
-}
-
-func (s *Server) GZIPInterceptor() grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			return handler(ctx, req)
-		}
-		if strings.Contains(strings.Join(md.Get("content-encoding"), " "), "gzip") {
-			r, ok := req.(io.Reader)
-			if !ok {
-				return handler(ctx, req)
-			}
-			req, err := gzip.NewReader(r)
-			if err != nil {
-				return handler(ctx, req)
-			}
-			defer func() {
-				if err = req.Close(); err != nil {
-					s.logger.Error(fmt.Sprintf("gzip: reader: close: %v", err))
-				}
-			}()
-		}
-
-		return nil, nil
-	}
 }

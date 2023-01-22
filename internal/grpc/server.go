@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 
+	grpc_mw "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip"
@@ -47,7 +49,12 @@ func New(srv service, l *zap.Logger) (*Server, error) {
 		return nil, err
 	}
 	server.listener = listener
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_mw.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(l),
+			server.CheckAuthInterceptor(),
+		)),
+	)
 	pb.RegisterShortenerServer(grpcServer, server)
 	server.server = grpcServer
 
