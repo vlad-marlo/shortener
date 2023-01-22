@@ -25,6 +25,12 @@ func BadRequest() error {
 	return status.Error(codes.InvalidArgument, "bad request")
 }
 
+// Canceled ...
 func Canceled() error {
 	return status.Error(codes.Canceled, "canceled")
+}
+
+// PermissionDenied ...
+func PermissionDenied() error {
+	return status.Error(codes.PermissionDenied, "permission denied")
 }

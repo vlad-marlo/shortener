@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/netip"
 
 	"go.uber.org/zap"
 
@@ -20,6 +21,7 @@ type Service struct {
 	config *config.Config
 }
 
+// New ...
 func New(logger *zap.Logger, store store.Store) *Service {
 	return &Service{
 		logger: logger,
@@ -111,8 +113,17 @@ func (s *Service) GetByID(ctx context.Context, id string) (*model.URL, error) {
 }
 
 // GetInternalStats ...
-func (s *Service) GetInternalStats(ctx context.Context, _ string) (*model.InternalStat, error) {
-	// TODO add checks that ip is in trusted ip subnetwork.
+func (s *Service) GetInternalStats(ctx context.Context, ip string) (*model.InternalStat, error) {
+	network, err := netip.ParsePrefix(s.config.TrustedIP)
+	if err != nil {
+		return nil, ErrForbidden
+	}
+
+	netip, err := netip.ParseAddr(ip)
+	if err != nil || !network.Contains(netip) {
+		return nil, ErrForbidden
+	}
+
 	return s.store.GetData(ctx)
 }
 

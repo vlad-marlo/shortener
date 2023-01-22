@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 
+	srv "github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
@@ -278,27 +279,28 @@ func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 
 // handleInternalStats give trusted user access to specific stats about data records.
 func (s *Server) handleInternalStats(w http.ResponseWriter, r *http.Request) {
+	xRealIP := r.Header.Get("X-Real-IP")
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
-		zap.String("request_ip", r.Header.Get("X-Real-IP")),
-	}
-
-	xRealIP := r.Header.Get("X-Real-IP")
-	if xRealIP == "" {
-		s.handleErrorOrStatus(w, errors.New("IP was not provided in header X-Real-IP"), fields, http.StatusForbidden)
-		return
+		zap.String("request_ip", xRealIP),
 	}
 
 	stat, err := s.srv.GetInternalStats(r.Context(), xRealIP)
 	if err != nil {
+		if errors.Is(err, srv.ErrForbidden) {
+			s.handleErrorOrStatus(w, err, fields, http.StatusForbidden)
+			return
+		}
 		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
 		return
 	}
+
 	data, err := json.Marshal(stat)
 	if err != nil {
 		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	if _, err = w.Write(data); err != nil {
 		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)

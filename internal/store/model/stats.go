@@ -3,7 +3,7 @@ package model
 // InternalStat ...
 type InternalStat struct {
 	// CountOfURLs ...
-	CountOfURLs int `json:"urls"`
+	CountOfURLs int64 `json:"urls"`
 	// CountOfUser ...
-	CountOfUsers int `json:"users"`
+	CountOfUsers int64 `json:"users"`
 }

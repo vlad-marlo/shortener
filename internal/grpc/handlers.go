@@ -9,8 +9,10 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
+	srv "github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 	"github.com/vlad-marlo/shortener/pkg/encryptor"
@@ -45,6 +47,7 @@ func (s *Server) GetLink(ctx context.Context, r *pb.GetLinkRequest) (*pb.GetLink
 	case errors.Is(err, store.ErrNotFound):
 		return nil, NotFound()
 	case err != nil:
+		s.logger.Error("grpc: get link", zap.Error(err))
 		resp.Status = http.StatusInternalServerError
 		return nil, Internal()
 	}
@@ -185,4 +188,23 @@ func (s *Server) getUser(r UserGetter) (res string, err error) {
 		return "", fmt.Errorf("decode uuid: %w", err)
 	}
 	return
+}
+
+func (s *Server) GetInternalStats(ctx context.Context, r *pb.GetInternalStatsRequest) (*pb.GetInternalStatsResponse, error) {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, PermissionDenied()
+	}
+	stat, err := s.srv.GetInternalStats(ctx, p.Addr.String())
+	if err != nil {
+		if errors.Is(err, srv.ErrForbidden) {
+			return nil, PermissionDenied()
+		}
+
+		return nil, Internal()
+	}
+	return &pb.GetInternalStatsResponse{
+		Urls:  stat.CountOfURLs,
+		Users: stat.CountOfUsers,
+	}, nil
 }
