@@ -9,34 +9,42 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/vlad-marlo/shortener/internal/httpserver"
+	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
 )
 
+func Test_createLogger(t *testing.T) {
+	logger, err := createLogger("xd")
+	assert.NoError(t, err)
+	require.NotNil(t, logger)
+	err = logger.Sync()
+	assert.Error(t, err)
+}
+
 func TestInitStorage(t *testing.T) {
 	tt := []struct {
 		name     string
-		cfg      *httpserver.Config
+		cfg      *config.Config
 		wantType store.Store
 	}{
 		{
 			name: "inmemory storage #1",
-			cfg: &httpserver.Config{
+			cfg: &config.Config{
 				StorageType: store.InMemoryStorage,
 			},
 			wantType: inmemory.New(),
 		},
 		{
 			name:     "inmemory storage #2",
-			cfg:      &httpserver.Config{},
+			cfg:      &config.Config{},
 			wantType: inmemory.New(),
 		},
 		{
 			name: "sql storage #1",
-			cfg: &httpserver.Config{
+			cfg: &config.Config{
 				Database:    "postgresql://postgres:postgres@localhost:5432/shortner_test?sslmode=disable",
 				StorageType: store.SQLStore,
 			},
@@ -44,7 +52,7 @@ func TestInitStorage(t *testing.T) {
 		},
 		{
 			name: "file storage #1",
-			cfg: &httpserver.Config{
+			cfg: &config.Config{
 				FilePath:    "xd",
 				StorageType: store.FileBasedStorage,
 			},
@@ -60,7 +68,8 @@ func TestInitStorage(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			l, err := zap.NewProduction()
 			require.NoError(t, err)
-			storage, err := initStorage(tc.cfg, l)
+			config.Set(tc.cfg)
+			storage, err := initStorage(l)
 
 			if tc.cfg.StorageType == store.SQLStore {
 				if tc.cfg.Database == "" || errors.Is(err, store.ErrNotAccessible) {
@@ -74,12 +83,4 @@ func TestInitStorage(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_createLogger(t *testing.T) {
-	logger, err := createLogger("xd")
-	assert.NoError(t, err)
-	require.NotNil(t, logger)
-	err = logger.Sync()
-	assert.Error(t, err)
 }

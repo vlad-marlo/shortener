@@ -106,3 +106,8 @@ func (s *Store) Close() error {
 	s.closed = true
 	return nil
 }
+
+// GetData ...
+func (s *Store) GetData(_ context.Context) (*model.InternalStat, error) {
+	return nil, nil
+}

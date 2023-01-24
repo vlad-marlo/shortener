@@ -19,7 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	srv "github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	mock_store "github.com/vlad-marlo/shortener/internal/store/mock"
@@ -118,11 +120,14 @@ func TestServer_HandleURLGetAndCreate(t *testing.T) {
 
 	storage := inmemory.New()
 	l, _ := zap.NewProduction()
-	s := New(&Config{
+	srvc := srv.New(l, storage)
+	defer require.NoError(t, srvc.Close())
+	s := New(srvc, l)
+	s.config = &config.Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, l)
+	}
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -191,11 +196,14 @@ func TestServer_HandleURLGet(t *testing.T) {
 
 	storage := inmemory.New()
 	l, _ := zap.NewProduction()
-	s := New(&Config{
+	srvc := srv.New(l, storage)
+	defer require.NoError(t, srvc.Close())
+	s := New(srvc, l)
+	s.config = &config.Config{
 		BaseURL:     "http://localhost:8080",
 		BindAddr:    "localhost:8080",
 		StorageType: store.InMemoryStorage,
-	}, storage, l)
+	}
 
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
@@ -585,7 +593,7 @@ func TestServer_handleURLGetAllByUser_Positive(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/sdf", nil)
-			r = r.WithContext(context.WithValue(r.Context(), middleware.UserCTXName, u))
+			r = r.WithContext(context.WithValue(r.Context(), middleware.UserCtxKey{}, u))
 			defer assert.NoError(t, r.Body.Close())
 			server.handleGetUserURLs(w, r)
 
@@ -660,6 +668,18 @@ func TestServer_handleURLGet(t *testing.T) {
 			mock: mock{
 				u:     nil,
 				error: errUnknownErr,
+			},
+			code: http.StatusInternalServerError,
+		},
+		{
+			name: "not found error",
+			args: args{
+				id:  "a",
+				url: "https://ya.ru",
+			},
+			mock: mock{
+				u:     nil,
+				error: store.ErrNotFound,
 			},
 			code: http.StatusNotFound,
 		},

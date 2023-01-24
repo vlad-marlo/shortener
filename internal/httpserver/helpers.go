@@ -34,7 +34,7 @@ func (s *Server) handleErrorOrStatus(w http.ResponseWriter, err error, fields []
 
 // getUserFromRequest ...
 func getUserFromRequest(r *http.Request) string {
-	user := r.Context().Value(middleware.UserCTXName)
+	user := middleware.GetUserFromCtx(r.Context())
 	if user == nil {
 		return middleware.UserIDDefaultValue
 	}

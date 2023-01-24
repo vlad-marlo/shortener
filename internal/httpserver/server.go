@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"net/http"
 	"net/http/pprof"
 	"time"
@@ -10,9 +11,9 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 
+	"github.com/vlad-marlo/shortener/internal/config"
 	"github.com/vlad-marlo/shortener/internal/httpserver/middleware"
-	"github.com/vlad-marlo/shortener/internal/poll"
-	"github.com/vlad-marlo/shortener/internal/store"
+	"github.com/vlad-marlo/shortener/internal/store/model"
 )
 
 // vars
@@ -21,33 +22,44 @@ var (
 	timeOut = 10 * time.Minute
 )
 
+type service interface {
+	Ping(ctx context.Context) error
+	CreateURL(ctx context.Context, user, url string) (*model.URL, error)
+	DeleteManyURLs(user string, urls []string)
+	GetAllURLsByUser(ctx context.Context, user string) ([]*model.AllUserURLsResponse, error)
+	NewURL(url, user string, correlationID ...string) (*model.URL, error)
+	CreateManyURLs(ctx context.Context, user string, urls []model.URLer) ([]*model.BatchCreateURLsResponse, error)
+	GetByID(ctx context.Context, id string) (*model.URL, error)
+	GetInternalStats(ctx context.Context, ip string) (*model.InternalStat, error)
+}
+
 // Server ...
 type Server struct {
 	chi.Router
 
-	srv *http.Server
-	dev bool
+	server *http.Server
+	srv    service
+	config *config.Config
+	dev    bool
 
-	store  store.Store
-	config *Config
-	poller *poll.Poll
+	// store:  store.Store
 	logger *zap.Logger
 }
 
 // New return new configured server with params from config object
 // need for creating only one connection to db
-func New(config *Config, storage store.Store, l *zap.Logger) *Server {
+func New(srv service, l *zap.Logger) *Server {
 	s := &Server{
 		dev:    true,
-		config: config,
 		Router: chi.NewRouter(),
 		logger: l,
-		store:  storage,
-		poller: poll.New(storage, l),
+		srv:    srv,
+		// store:  storage,
+		config: config.Get(),
 	}
 
-	s.srv = &http.Server{
-		Addr:         s.config.BindAddr,
+	s.server = &http.Server{
+		Addr:         config.Get().BindAddr,
 		Handler:      s.Router,
 		ReadTimeout:  timeOut,
 		WriteTimeout: timeOut,
@@ -67,9 +79,8 @@ func New(config *Config, storage store.Store, l *zap.Logger) *Server {
 
 // Close closes poller and storage connection.
 func (s *Server) Close() error {
-	s.poller.Close()
 	if s.dev {
-		return s.srv.Close()
+		return s.server.Close()
 	}
 	return nil
 }
@@ -121,15 +132,15 @@ func (s *Server) configureMiddlewares() {
 
 // ListenAndServe is starting http server on correct address
 func (s *Server) ListenAndServe() error {
-	if s.config.HTTPS {
+	if config.Get().HTTPS {
 		manager := &autocert.Manager{
 			Cache:      autocert.DirCache("cache-dir"),
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(s.config.BindAddr),
+			HostPolicy: autocert.HostWhitelist(config.Get().BindAddr),
 		}
-		s.srv.TLSConfig = manager.TLSConfig()
+		s.server.TLSConfig = manager.TLSConfig()
 
-		return s.srv.ListenAndServeTLS("", "")
+		return s.server.ListenAndServeTLS("", "")
 	}
-	return s.srv.ListenAndServe()
+	return s.server.ListenAndServe()
 }

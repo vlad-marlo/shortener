@@ -26,6 +26,11 @@ type URL struct {
 	IsDeleted bool   `json:"-"`
 }
 
+type URLer interface {
+	GetCorrelationId() string
+	GetOriginalUrl() string
+}
+
 // NewURL ...
 func NewURL(url, user string, correlationID ...string) (*URL, error) {
 	u := &URL{
@@ -67,4 +72,19 @@ func (u *URL) ShortURL() error {
 		return u.ShortURL()
 	}
 	return u.Validate()
+}
+
+// GetUser ...
+func (u *URL) GetUser() string {
+	return u.User
+}
+
+// GetCorrelationId ...
+func (u *URL) GetCorrelationId() string {
+	return u.CorelID
+}
+
+// GetOriginalUrl ...
+func (u *URL) GetOriginalUrl() string {
+	return u.BaseURL
 }

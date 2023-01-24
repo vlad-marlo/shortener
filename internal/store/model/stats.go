@@ -1,0 +1,9 @@
+package model
+
+// InternalStat ...
+type InternalStat struct {
+	// CountOfURLs ...
+	CountOfURLs int64 `json:"urls"`
+	// CountOfUser ...
+	CountOfUsers int64 `json:"users"`
+}

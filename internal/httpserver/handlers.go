@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 
-	"github.com/go-chi/chi/v5"
-
+	srv "github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store"
 	"github.com/vlad-marlo/shortener/internal/store/model"
 )
@@ -22,18 +22,22 @@ func (s *Server) handleURLGet(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(ctx)
 	fields := []zap.Field{
 		zap.String("request_id", reqID),
-		zap.String("handler", "get url by id"),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
 	id := chi.URLParam(r, "id")
 
-	url, err := s.store.GetByID(ctx, id)
-	if errors.Is(err, store.ErrIsDeleted) {
+	url, err := s.srv.GetByID(ctx, id)
+	switch {
+	case errors.Is(err, store.ErrIsDeleted):
 		w.WriteHeader(http.StatusGone)
 		return
-	} else if err != nil {
+	case errors.Is(err, store.ErrNotFound):
 		s.handleErrorOrStatus(w, errors.New("where is no url with that id"), fields, http.StatusNotFound)
+		return
+	case err != nil:
+		s.handleErrorOrStatus(w, fmt.Errorf("internal: %w", err), fields, http.StatusInternalServerError)
 		return
 	}
 
@@ -49,6 +53,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 	// setting up response meta info
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -68,28 +73,17 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
-		return
-	}
-
 	userID := getUserFromRequest(r)
 
-	u, err := model.NewURL(string(data), userID)
-	if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
+	u, err := s.srv.CreateURL(r.Context(), userID, string(data))
+	switch {
+	case errors.Is(err, store.ErrAlreadyExists):
+		w.WriteHeader(http.StatusConflict)
+		_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.config.BaseURL, u.ID)))
+
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
 		return
-	}
-
-	ctx := r.Context()
-
-	if err = s.store.Create(ctx, u); err != nil {
-		if errors.Is(err, store.ErrAlreadyExists) {
-			w.WriteHeader(http.StatusConflict)
-			_, err = w.Write([]byte(fmt.Sprintf("%s/%s", s.config.BaseURL, u.ID)))
-
-			s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
-			return
-		}
-
+	case err != nil:
 		s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest)
 		return
 	}
@@ -107,6 +101,7 @@ func (s *Server) handleURLCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 
 	req, err := io.ReadAll(r.Body)
@@ -121,25 +116,21 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 
 	userID := getUserFromRequest(r)
 
-	u := &model.URL{
-		User: userID,
-	}
+	u := &model.URL{}
 	if err = json.Unmarshal(req, u); s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
-		return
-	}
-
-	if err = u.ShortURL(); s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
 		return
 	}
 
 	ctx := r.Context()
 
 	w.Header().Set("Content-Type", "application/json")
-	if err = s.store.Create(ctx, u); errors.Is(err, store.ErrAlreadyExists) {
+	u, err = s.srv.CreateURL(ctx, userID, u.BaseURL)
+	switch {
+	case errors.Is(err, store.ErrAlreadyExists):
 		w.WriteHeader(http.StatusConflict)
-	} else if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
+	case s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest):
 		return
-	} else {
+	default:
 		w.WriteHeader(http.StatusCreated)
 	}
 
@@ -159,12 +150,13 @@ func (s *Server) handleURLCreateJSON(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	userID := getUserFromRequest(r)
 
 	ctx := r.Context()
 
-	urls, err := s.store.GetAllUserURLs(ctx, userID)
+	urls, err := s.srv.GetAllURLsByUser(ctx, userID)
 	if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
 		return
 	}
@@ -173,16 +165,7 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var responseURLs []*model.AllUserURLsResponse
-	for _, u := range urls {
-		resp := &model.AllUserURLsResponse{
-			ShortURL:    fmt.Sprintf("%s/%s", s.config.BaseURL, u.ID),
-			OriginalURL: u.BaseURL,
-		}
-		responseURLs = append(responseURLs, resp)
-	}
-
-	response, err := json.Marshal(responseURLs)
+	response, err := json.Marshal(urls)
 	if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
 		return
 	}
@@ -199,10 +182,11 @@ func (s *Server) handleGetUserURLs(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	ctx := r.Context()
 
-	if err := s.store.Ping(ctx); err != nil {
+	if err := s.srv.Ping(ctx); err != nil {
 		s.handleErrorOrStatus(w, fmt.Errorf("handlePingStore: %w", err), fields, http.StatusInternalServerError)
 		return
 	}
@@ -218,10 +202,10 @@ func (s *Server) handlePingStore(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	var (
 		data []*model.BulkCreateURLRequest
-		urls []*model.URL
 	)
 	body, err := io.ReadAll(r.Body)
 	if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
@@ -239,27 +223,14 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 
 	userID := getUserFromRequest(r)
 
+	var urls []model.URLer
 	for _, v := range data {
-		var u *model.URL
-		u, err = model.NewURL(v.OriginalURL, userID, v.CorrelationID)
-		if s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError) {
-			return
-		}
-		urls = append(
-			urls,
-			u,
-		)
+		urls = append(urls, v)
 	}
 
-	ctx := r.Context()
-
-	resp, err := s.store.URLsBulkCreate(ctx, urls)
+	resp, err := s.srv.CreateManyURLs(r.Context(), userID, urls)
 	if s.handleErrorOrStatus(w, err, fields, http.StatusBadRequest) {
 		return
-	}
-	for _, v := range resp {
-		id := v.ShortURL
-		v.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, id)
 	}
 
 	body, err = json.Marshal(resp)
@@ -282,6 +253,7 @@ func (s *Server) handleURLBulkCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 	fields := []zap.Field{
 		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", r.Header.Get("X-Real-IP")),
 	}
 	var data []string
 	userID := getUserFromRequest(r)
@@ -301,6 +273,36 @@ func (s *Server) handleURLBulkDelete(w http.ResponseWriter, r *http.Request) {
 		s.handleErrorOrStatus(w, fmt.Errorf("handle bulk url delete: json unmarshal data: %w", err), fields, http.StatusBadRequest)
 		return
 	}
-	s.poller.DeleteURLs(data, userID)
+	s.srv.DeleteManyURLs(userID, data)
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleInternalStats give trusted user access to specific stats about data records.
+func (s *Server) handleInternalStats(w http.ResponseWriter, r *http.Request) {
+	xRealIP := r.Header.Get("X-Real-IP")
+	fields := []zap.Field{
+		zap.String("request_id", middleware.GetReqID(r.Context())),
+		zap.String("request_ip", xRealIP),
+	}
+
+	stat, err := s.srv.GetInternalStats(r.Context(), xRealIP)
+	if err != nil {
+		if errors.Is(err, srv.ErrForbidden) {
+			s.handleErrorOrStatus(w, err, fields, http.StatusForbidden)
+			return
+		}
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
+		return
+	}
+
+	data, err := json.Marshal(stat)
+	if err != nil {
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if _, err = w.Write(data); err != nil {
+		s.handleErrorOrStatus(w, err, fields, http.StatusInternalServerError)
+	}
 }

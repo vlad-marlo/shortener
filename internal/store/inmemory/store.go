@@ -48,6 +48,7 @@ func (s *Store) Create(ctx context.Context, u *model.URL) (err error) {
 	}
 
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, ok := s.urls[u.ID]; ok; _, ok = s.urls[u.ID] {
 		if err = ctx.Err(); err != nil {
 			return fmt.Errorf("context err: %w", err)
@@ -59,7 +60,6 @@ func (s *Store) Create(ctx context.Context, u *model.URL) (err error) {
 	}
 
 	s.urls[u.ID] = u
-	s.mu.Unlock()
 	return
 }
 
@@ -137,4 +137,9 @@ func (s *Store) Close() error {
 		return store.ErrAlreadyClosed
 	}
 	return nil
+}
+
+// GetData ...
+func (s *Store) GetData(_ context.Context) (*model.InternalStat, error) {
+	return nil, nil
 }

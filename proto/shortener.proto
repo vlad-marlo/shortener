@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package shortener.proto;
+
+option go_package = "api/proto";
+
+message CreateLinkRequest {
+  string url = 1;
+  string user = 2;
+}
+
+message CreateLinkResponse {
+  string result = 1;
+  uint32 status = 2;
+}
+
+message GetLinkRequest {
+  string id = 1;
+}
+
+message GetLinkResponse {
+  string location = 1;
+  uint32 status = 2;
+}
+
+message GetManyLinksRequest {
+  string user = 1;
+}
+
+message GetManyLinksResponse {
+  message URL {
+    string short_url = 1;
+    string original_url = 2;
+  }
+  repeated URL urls = 1;
+  uint32 status = 2;
+}
+
+message CreateLinkJSONRequest {
+  string url = 1;
+  string user = 2;
+}
+
+message CreateLinkJSONResponse {
+  string result = 1;
+  uint32 status = 2;
+}
+
+message PingRequest {
+
+}
+
+message PingResponse {
+  uint32 status = 1;
+}
+
+message CreateManyRequest {
+  message URL {
+    string correlation_id = 1;
+    string original_url = 2;
+  }
+  repeated URL urls = 1;
+  string user = 2;
+}
+
+message CreateManyResponse {
+  message URL {
+    string correlation_id = 1;
+    string short_url = 2;
+  }
+  repeated URL urls = 1;
+  uint32 status = 2;
+}
+
+message DeleteManyRequest {
+  repeated string ids = 1;
+  string user = 2;
+}
+
+message DeleteManyResponse {
+  uint32 status = 1;
+}
+
+message GetUserRequest {}
+
+message GetUserResponse {
+  string user = 1;
+}
+
+message GetInternalStatsRequest {
+}
+
+message GetInternalStatsResponse {
+  int64 urls = 1;
+  int64 users = 2;
+}
+
+service Shortener {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetLink(GetLinkRequest) returns (GetLinkResponse);
+  rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse);
+  rpc DeleteMany(DeleteManyRequest) returns (DeleteManyResponse);
+  rpc GetManyLinks(GetManyLinksRequest) returns (GetManyLinksResponse);
+  rpc CreateManyLinks(CreateManyRequest) returns (CreateManyResponse);
+  rpc CreateLinkJSON(CreateLinkJSONRequest) returns (CreateLinkJSONResponse);
+  rpc GetInternalStats(GetInternalStatsRequest) returns (GetInternalStatsResponse);
+}

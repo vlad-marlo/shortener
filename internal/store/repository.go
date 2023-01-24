@@ -32,4 +32,6 @@ type Store interface {
 	URLsBulkCreate(context.Context, []*model.URL) ([]*model.BatchCreateURLsResponse, error)
 	// URLsBulkDelete ...
 	URLsBulkDelete([]string, string) error
+	// GetData ...
+	GetData(ctx context.Context) (*model.InternalStat, error)
 }

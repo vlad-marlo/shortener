@@ -36,4 +36,10 @@ cover:
 lines:
 	git ls-files | xargs wc -l
 
+.PHONY: generate
+generate:
+	protoc --go_out=./pkg --go_opt=paths=source_relative \
+      --go-grpc_out=./pkg --go-grpc_opt=paths=source_relative \
+      proto/shortener.proto
+
 .DEFAULT_GOAL := build

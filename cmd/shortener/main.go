@@ -13,7 +13,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/vlad-marlo/shortener/internal/config"
+	"github.com/vlad-marlo/shortener/internal/grpc"
 	_ "github.com/vlad-marlo/shortener/internal/httpserver/middleware"
+	"github.com/vlad-marlo/shortener/internal/service"
 	"github.com/vlad-marlo/shortener/internal/store/filebased"
 	"github.com/vlad-marlo/shortener/internal/store/inmemory"
 	"github.com/vlad-marlo/shortener/internal/store/sqlstore"
@@ -30,12 +33,12 @@ var (
 
 // main ...
 func main() {
-	storeLogger, err := createLogger("storage")
+	srvLogger, err := createLogger("service")
 	if err != nil {
 		panic(fmt.Sprintf("init strorage logger: %v", err))
 	}
 	defer func() {
-		_ = storeLogger.Sync()
+		_ = srvLogger.Sync()
 	}()
 
 	serverLogger, err := createLogger("server")
@@ -45,24 +48,40 @@ func main() {
 	defer func() {
 		_ = serverLogger.Sync()
 	}()
-
-	config, err := httpserver.NewConfig()
 	if err != nil {
 		serverLogger.Fatal(fmt.Sprintf("init config: %v", err))
 	}
 
-	storage, err := initStorage(config, storeLogger)
+	storage, err := initStorage(srvLogger)
 	if err != nil {
 		serverLogger.Fatal(fmt.Sprintf("init storage: %v", err))
 	}
+	srv := service.New(srvLogger, storage)
 	defer func() {
-		if err = storage.Close(); err != nil {
-			storeLogger.Fatal(fmt.Sprintf("close storage: %v", err))
+		if err = srv.Close(); err != nil {
+			srvLogger.Error("close service", zap.Error(err))
 		}
 	}()
 
 	// init server
-	s := httpserver.New(config, storage, serverLogger)
+	httpServer := httpserver.New(srv, serverLogger)
+	if config.Get().GRPC {
+		var grpcServer *grpc.Server
+		grpcServer, err = grpc.New(srv, serverLogger)
+		if err != nil {
+			serverLogger.Fatal("init grpc server", zap.Error(err))
+		}
+		go func() {
+			if err = grpcServer.Start(); err != nil {
+				serverLogger.Fatal("grpc server", zap.Error(err))
+			}
+		}()
+		defer func() {
+			if err = grpcServer.Close(); err != nil {
+				serverLogger.Error("grpc server stop", zap.Error(err))
+			}
+		}()
+	}
 
 	// preparations for graceful shut down
 	var sig os.Signal
@@ -72,7 +91,7 @@ func main() {
 
 	go func() {
 		sig = <-interrupt
-		if err = s.Close(); err != nil {
+		if err = httpServer.Close(); err != nil {
 			serverLogger.Error(fmt.Sprintf("close server: %v", err))
 		}
 		close(closed)
@@ -80,13 +99,13 @@ func main() {
 
 	serverLogger.Info(
 		"successfully init server",
-		zap.String("bind_addr", config.BindAddr),
-		zap.String("storage_type", config.StorageType),
+		zap.String("bind_addr", config.Get().BindAddr),
+		zap.String("storage_type", config.Get().StorageType),
 	)
 
 	go func() {
 		// logging fatal because listen and server always return not-nil error
-		if err = s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		if err = httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			serverLogger.Fatal(fmt.Sprintf("listen and server server: %v", err))
 		}
 	}()
@@ -100,7 +119,6 @@ func main() {
 
 // createLogger creates new named logger with stdout and file output.
 func createLogger(name string) (*zap.Logger, error) {
-
 	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl >= zapcore.ErrorLevel
 	})
@@ -128,7 +146,8 @@ func createLogger(name string) (*zap.Logger, error) {
 }
 
 // initStorage is abstract factory to create new storage object with provided config.
-func initStorage(cfg *httpserver.Config, logger *zap.Logger) (storage store.Store, err error) {
+func initStorage(logger *zap.Logger) (storage store.Store, err error) {
+	cfg := config.Get()
 	logger.Debug(
 		"trace config vars",
 		zap.Bool("filename_provided", cfg.FilePath != ""),
